@@ -21,8 +21,19 @@
     ctx.lineWidth = 0;
 
     // CAMERA ============================================================
+    var origin = xy(0, 0);
     function moveCameraBy(xy) {
-      ctx.translate(-xy.x, xy.y);
+      ctx.translate(-xy.x, -xy.y);
+      origin.x += xy.x;
+      origin.y += xy.y;
+    }
+
+    function checkCamera() {
+
+      // Focus camera on drone
+      var dx = Drone.actor.p.x - origin.x, dy = Drone.actor.p.y - origin.y;
+      if (dx < camera_margin.x) { moveCameraBy(xy(-dx, 0)); }
+      if ((game_size.x - dx) < camera_margin.x) { moveCameraBy(xy(game_size.x - dx, 0)); }
     }
 
 
@@ -32,7 +43,17 @@
       yAt: function(x) {
         return this.y;
       },
+      tick: function() {},
       draw: function() {
+        // Background
+        var grd = ctx.createLinearGradient(0, 0, 0, game_size.y);
+        backgroundGradient.forEach(function(params) {
+          grd.addColorStop.apply(grd, params);
+        })
+        draw.r(ctx, origin, xy(origin.x + game_size.x, origin.y + game_size.y), {fillStyle: grd});
+
+        // Ground
+        // draw.r(ctx, origin, xy(origin.x + game_size.x, origin.y + game_size.y), {fillStyle: '#222', noStrk:1});
         draw.r(ctx, xy(-100,0), xy(100, this.y), {fillStyle: '#222', noStrk:1});
       }
     }
@@ -41,8 +62,8 @@
     // ACTORS ============================================================
     // they move around
 
-    function Actor() {
-      this.p = xy(0, 0);
+    function Actor(p) {
+      this.p = p || xy(0, 0);
       this.v = xy(0, 0);
 
       this.tick = function() {
@@ -51,12 +72,10 @@
       }
     }
 
-    // ACTORS ============================================================
-    // they move around
+    // PEOPLE ============================================================
 
     function Person(loc) {
-      this.actor = new Actor();
-      this.actor.p = loc;
+      this.actor = new Actor(loc);
 
       this.tick = function() { tickity(this.actor); }
 
@@ -68,12 +87,52 @@
       }
     }
 
+    // THE DRONE =========================================================
+
+    var Drone = {
+      actor: new Actor(xy(6, 20)),
+      tick: function() {},
+      draw: function() {
+        draw.r(ctx, 
+          {x: this.actor.p.x - drone_size.x/2, y: this.actor.p.y - drone_size.y/2},
+          {x: this.actor.p.x + drone_size.x/2, y: this.actor.p.y + drone_size.y/2}
+        );
+      }
+    }
+
+    // THE PLAYER ========================================================
+    // it moves stuff around
+
+    var Player = {
+      tick: function() {},
+      draw: function() {},
+      inputControlMap: {
+        // map event.which => function
+        // ADSW directions for drone
+        65: function() { Drone.actor.p.x -= 1; },
+        68: function() { Drone.actor.p.x += 1; },
+        83: function() { Drone.actor.p.y -= 1; },
+        87: function() { Drone.actor.p.y += 1; }
+      }
+    }
+
 
     // SAMPLES ===========================================================
     var samples = [];
     samples.push(new Person(xy(4, 3)));
     samples.push(new Person(xy(5, 3)));
     samples.push(new Person(xy(5.5, 3)));
+
+
+    // GAME EVENTS =======================================================
+
+    // This would be less janky if input check was inside the tick function
+    window.addEventListener("keydown", function(event) {
+      if (event.which in Player.inputControlMap) {
+        Player.inputControlMap[event.which]();
+        checkCamera();
+      }
+    });
 
 
     // GAME LOOP =========================================================
@@ -85,22 +144,15 @@
 
     function go() {
       if (!state.on) { return; }
+      wnd.requestAnimationFrame(go);
 
       // Ticking
+      [environment, Player, Drone].forEach(tickity);
       samples.forEach(tickity);
 
-      // Draw background gradient
-      var grd = ctx.createLinearGradient(0, 0, 0, game_size.y);
-      backgroundGradient.forEach(function(params) {
-        grd.addColorStop.apply(grd, params);
-      })
-      draw.r(ctx, xy(0,0), game_size, {fillStyle: grd});
-
       // Drawing
+      [environment, Player, Drone].forEach(drawity);
       samples.forEach(drawity);
-      drawity(environment);
-
-      wnd.setTimeout(function() { go() }, 1000/fps);
     }
 
     state.on = true;

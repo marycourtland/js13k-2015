@@ -1,7 +1,9 @@
-// Game settings
+// All units in game units except for game_scale
+
+// Game and camera settings
 var game_scale = {x: 20, y: 20}, // pixels > game units conversion
-    game_size = {x: wnd.outerWidth/game_scale.x, y: 30}, // game units
-    fps = 30
+    game_size = {x: wnd.outerWidth/game_scale.x, y: 30},
+    camera_margin = {x: 4, y: 4}
 ;
 
 // Aesthetic stuff
@@ -21,9 +23,14 @@ var backgroundGradient = [
     ]
 ; 
 
-// People (units in scaled game units)
+// People
 var person_size = {x: 0.3, y: 0.6},
     person_color = '#511'
+;
+
+// Drone
+var drone_size = {x: 0.6, y: 0.4},
+    drone_color = '#EEE'
 ;
 
 
