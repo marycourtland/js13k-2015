@@ -1,0 +1,110 @@
+<!DOCTYPE HTML>
+<html>
+  <body style="margin:0;">
+    <canvas id="game_canvas"></canvas>
+  </body>
+  
+  <script type="text/javascript" src="shortcuts.js"></script>
+  <script type="text/javascript" src="drawing.js"></script>
+  <script type="text/javascript" src="settings.js"></script>
+
+  <script type="text/javascript">
+
+    // SETUP =============================================================
+    var canvas = $("#game_canvas"), ctx = canvas.getContext('2d');
+    canvas.setAttribute("width", game_size.x * game_scale.x);
+    canvas.setAttribute("height", game_size.y * game_scale.y);
+
+    // x/y grid, origin at lower left corner. Positive is up and rightwards
+    // note: it will move left/right as the player moves camera
+    ctx.setTransform(game_scale.x, 0, 0, -game_scale.y, 0, game_size.y * game_scale.y);
+    ctx.lineWidth = 0;
+
+    // CAMERA ============================================================
+    function moveCameraBy(xy) {
+      ctx.translate(-xy.x, xy.y);
+    }
+
+
+    // ENVIRONMENT =======================================================
+    var environment = {
+      y: 3,
+      yAt: function(x) {
+        return this.y;
+      },
+      draw: function() {
+        draw.r(ctx, xy(-100,0), xy(100, this.y), {fillStyle: '#222', noStrk:1});
+      }
+    }
+
+
+    // ACTORS ============================================================
+    // they move around
+
+    function Actor() {
+      this.p = xy(0, 0);
+      this.v = xy(0, 0);
+
+      this.tick = function() {
+        this.p.x += this.v.x;
+        this.p.y += this.v.y;
+      }
+    }
+
+    // ACTORS ============================================================
+    // they move around
+
+    function Person(loc) {
+      this.actor = new Actor();
+      this.actor.p = loc;
+
+      this.tick = function() { tickity(this.actor); }
+
+      this.draw = function() {
+        draw.r(ctx, 
+          {x: this.actor.p.x - person_size.x/2, y: this.actor.p.y},
+          {x: this.actor.p.x + person_size.x/2, y: this.actor.p.y + person_size.y}
+        );
+      }
+    }
+
+
+    // SAMPLES ===========================================================
+    var samples = [];
+    samples.push(new Person(xy(4, 3)));
+    samples.push(new Person(xy(5, 3)));
+    samples.push(new Person(xy(5.5, 3)));
+
+
+    // GAME LOOP =========================================================
+
+    var state = {
+      on: false,
+    };
+
+
+    function go() {
+      if (!state.on) { return; }
+
+      // Ticking
+      samples.forEach(tickity);
+
+      // Draw background gradient
+      var grd = ctx.createLinearGradient(0, 0, 0, game_size.y);
+      backgroundGradient.forEach(function(params) {
+        grd.addColorStop.apply(grd, params);
+      })
+      draw.r(ctx, xy(0,0), game_size, {fillStyle: grd});
+
+      // Drawing
+      samples.forEach(drawity);
+      drawity(environment);
+
+      wnd.setTimeout(function() { go() }, 1000/fps);
+    }
+
+    state.on = true;
+    go();
+
+  </script>
+</html>
