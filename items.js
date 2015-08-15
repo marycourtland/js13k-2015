@@ -11,4 +11,5 @@ function Item(loc) {
       this.p = vec_add(this.heldBy.actor.p, xy(0.45, 0.1));
     }
   }
+
 }

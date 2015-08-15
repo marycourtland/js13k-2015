@@ -29,6 +29,12 @@ function go(time) {
 
 }
 
+function loopDestroy(obj) {
+  console.log('Destroyng:', obj);
+    delete obj.tick;
+    delete obj.draw;
+}
+
 
 // For `temporary debugging
 function debug() {

@@ -27,4 +27,10 @@ function Battery(loc) {
     })
     
   }
+
+  this.use = function() {
+    // `todo (when energy stuff is implemented): fill drone battery level
+    loopDestroy(this);
+    if (this.item.heldBy) this.item.heldBy.drop();
+  }
 }

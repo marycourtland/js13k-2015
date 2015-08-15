@@ -28,14 +28,22 @@ function Person(loc) {
     item.item.heldBy = this;
   }
 
+
   this.drop = function() {
+    if (!this.inventory_item) return;
+    this.inventory_item.item.p.y = environment.y0;
     this.inventory_item.item.heldBy = null;
     this.inventory_item = null;
-    // `todo: make sure item falls to ground
   }
+  // `todo: move drop code to the person obj
 
   this.itemInteract = function() {
     // `todo: search for nearby items (instead of using the sample battery)
     this.inventory_item ? this.drop() : this.hold(sample_battery);
+  }
+
+  this.giveItemToDrone = function() {
+    if (!this.inventory_item) { return; }
+    this.inventory_item.use();
   }
 }

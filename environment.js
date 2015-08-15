@@ -4,6 +4,7 @@ var environment = {
   xres: 0.5,
 
   // Height
+  y0: 3,
   y: {},
   pts: [],
 
