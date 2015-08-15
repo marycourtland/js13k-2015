@@ -8,155 +8,32 @@
   <script type="text/javascript" src="drawing.js"></script>
   <script type="text/javascript" src="settings.js"></script>
 
+  <script type="text/javascript" src="setup.js"></script>
+  <script type="text/javascript" src="camera.js"></script>
+
+  <script type="text/javascript" src="environment.js"></script>
+  <script type="text/javascript" src="actors.js"></script>
+  <script type="text/javascript" src="people.js"></script>
+  <script type="text/javascript" src="drone.js"></script>
+  <script type="text/javascript" src="player.js"></script>
+
+  <script type="text/javascript" src="events.js"></script>
+  <script type="text/javascript" src="gameloop.js"></script>
+
   <script type="text/javascript">
+    wnd.onload = function() {
+      window.loop_objects = [environment, Player, Drone];
 
-    // SETUP =============================================================
-    var canvas = $("#game_canvas"), ctx = canvas.getContext('2d');
-    canvas.setAttribute("width", game_size.x * game_scale.x);
-    canvas.setAttribute("height", game_size.y * game_scale.y);
+      // `temp sample people
+      loop_objects.push(new Person(xy(4, 3)));
+      loop_objects.push(new Person(xy(5, 3)));
+      loop_objects.push(new Person(xy(5.5, 3)));
 
-    // x/y grid, origin at lower left corner. Positive is up and rightwards
-    // note: it will move left/right as the player moves camera
-    ctx.setTransform(game_scale.x, 0, 0, -game_scale.y, 0, game_size.y * game_scale.y);
-    ctx.lineWidth = 0;
-
-    // CAMERA ============================================================
-    var origin = xy(0, 0);
-    function moveCameraBy(xy) {
-      ctx.translate(-xy.x, -xy.y);
-      origin.x += xy.x;
-      origin.y += xy.y;
-    }
-
-    function checkCamera() {
-
-      // Focus camera on drone
-      var dx = Drone.actor.p.x - origin.x, dy = Drone.actor.p.y - origin.y;
-      if (dx < camera_margin.x) { moveCameraBy(xy(-dx, 0)); }
-      if ((game_size.x - dx) < camera_margin.x) { moveCameraBy(xy(game_size.x - dx, 0)); }
-    }
-
-
-    // ENVIRONMENT =======================================================
-    var environment = {
-      y: 3,
-      yAt: function(x) {
-        return this.y;
-      },
-      tick: function() {},
-      draw: function() {
-        // Background
-        var grd = ctx.createLinearGradient(0, 0, 0, game_size.y);
-        backgroundGradient.forEach(function(params) {
-          grd.addColorStop.apply(grd, params);
-        })
-        draw.r(ctx, origin, xy(origin.x + game_size.x, origin.y + game_size.y), {fillStyle: grd});
-
-        // Ground
-        // draw.r(ctx, origin, xy(origin.x + game_size.x, origin.y + game_size.y), {fillStyle: '#222', noStrk:1});
-        draw.r(ctx, xy(-100,0), xy(100, this.y), {fillStyle: '#222', noStrk:1});
-      }
-    }
-
-
-    // ACTORS ============================================================
-    // they move around
-
-    function Actor(p) {
-      this.p = p || xy(0, 0);
-      this.v = xy(0, 0);
-
-      this.tick = function() {
-        this.p.x += this.v.x;
-        this.p.y += this.v.y;
-      }
-    }
-
-    // PEOPLE ============================================================
-
-    function Person(loc) {
-      this.actor = new Actor(loc);
-
-      this.tick = function() { tickity(this.actor); }
-
-      this.draw = function() {
-        draw.r(ctx, 
-          {x: this.actor.p.x - person_size.x/2, y: this.actor.p.y},
-          {x: this.actor.p.x + person_size.x/2, y: this.actor.p.y + person_size.y}
-        );
-      }
-    }
-
-    // THE DRONE =========================================================
-
-    var Drone = {
-      actor: new Actor(xy(6, 20)),
-      tick: function() {},
-      draw: function() {
-        draw.r(ctx, 
-          {x: this.actor.p.x - drone_size.x/2, y: this.actor.p.y - drone_size.y/2},
-          {x: this.actor.p.x + drone_size.x/2, y: this.actor.p.y + drone_size.y/2}
-        );
-      }
-    }
-
-    // THE PLAYER ========================================================
-    // it moves stuff around
-
-    var Player = {
-      tick: function() {},
-      draw: function() {},
-      inputControlMap: {
-        // map event.which => function
-        // ADSW directions for drone
-        65: function() { Drone.actor.p.x -= 1; },
-        68: function() { Drone.actor.p.x += 1; },
-        83: function() { Drone.actor.p.y -= 1; },
-        87: function() { Drone.actor.p.y += 1; }
-      }
-    }
-
-
-    // SAMPLES ===========================================================
-    var samples = [];
-    samples.push(new Person(xy(4, 3)));
-    samples.push(new Person(xy(5, 3)));
-    samples.push(new Person(xy(5.5, 3)));
-
-
-    // GAME EVENTS =======================================================
-
-    // This would be less janky if input check was inside the tick function
-    window.addEventListener("keydown", function(event) {
-      if (event.which in Player.inputControlMap) {
-        Player.inputControlMap[event.which]();
-        checkCamera();
-      }
-    });
-
-
-    // GAME LOOP =========================================================
-
-    var state = {
-      on: false,
+      environment.generate();
+      
+      state.on = true;
+      go();
     };
-
-
-    function go() {
-      if (!state.on) { return; }
-      wnd.requestAnimationFrame(go);
-
-      // Ticking
-      [environment, Player, Drone].forEach(tickity);
-      samples.forEach(tickity);
-
-      // Drawing
-      [environment, Player, Drone].forEach(drawity);
-      samples.forEach(drawity);
-    }
-
-    state.on = true;
-    go();
 
   </script>
 </html>
