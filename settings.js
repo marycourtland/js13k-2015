@@ -8,7 +8,7 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 
 // Aesthetic stuff
 ,   backgroundGradient = [
-        // gradient color stops,
+        // gradient color stops
         [1.0, '#111320'],
         [0.85, '#17182a'],
         [0.7, '#1f2035'],
@@ -30,5 +30,8 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 // Drone
 ,   drone_size = {x: 0.6, y: 0.4}
 ,   drone_color = '#EEE'
+
+// Items
+,   battery_size = {x: 0.5, y: 0.3}
 
 ;

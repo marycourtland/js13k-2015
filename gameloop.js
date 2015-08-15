@@ -20,8 +20,9 @@ function go(time) {
   loop_objects.forEach(tickity);
   loop_objects.forEach(drawity);
 
-  debug("Drone controls:", Drone.person);
-  debug("Close people:  ", close_people_per_tick);
+  debug("Drone controls: ", Drone.person);
+  debug("Close people:   ", close_people_per_tick);
+  debug("Battery held by:", sample_battery.item.heldBy);
 
   if (gameplay_frame % debug_period === 0) console.groupEnd(); // `temp
   gameplay_frame += 1;

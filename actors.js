@@ -1,5 +1,6 @@
 // ACTORS ============================================================
 // they move around
+// ** parent object
 
 function Actor(p) {
   this.p = p || xy(0, 0);

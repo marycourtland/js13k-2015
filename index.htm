@@ -7,6 +7,7 @@
     <p>Move with <em>A, W, S, D</em></p>
     <p>Press <em>space</em> take control of a human <br />(must be in range of control signal)</p>
     <p>Move your human with <em>&larr;, &rarr;</em></p>
+    <p>Make your human hold/drop items with <em>&darr;</em></p>
   </body>
   
   <script type="text/javascript" src="shortcuts.js"></script>
@@ -22,6 +23,9 @@
   <script type="text/javascript" src="drone.js"></script>
   <script type="text/javascript" src="player.js"></script>
 
+  <script type="text/javascript" src="items.js"></script>
+  <script type="text/javascript" src="batteries.js"></script>
+
   <script type="text/javascript" src="events.js"></script>
   <script type="text/javascript" src="gameloop.js"></script>
 
@@ -29,10 +33,13 @@
     wnd.onload = function() {
       window.loop_objects = [environment, Player, Drone];
 
-      // `temp sample people
+      // `temp sample people/items
       loop_objects.push(new Person(xy(14, 3)));
       loop_objects.push(new Person(xy(15, 3)));
       loop_objects.push(new Person(xy(15.5, 3)));
+
+      window.sample_battery = new Battery(xy(25, 3));
+      loop_objects.push(sample_battery);
 
       Drone.control(new Person(xy(Drone.actor.p.x - 1, 3)));
       loop_objects.push(Drone.person);

@@ -12,6 +12,7 @@ var Player = {
     87: function() { Drone.actor.p.y += 1; },
     37: function() { if (probability(Drone.controlStrength())) Drone.person.actor.p.x -= 1; },
     39: function() { if (probability(Drone.controlStrength())) Drone.person.actor.p.x += 1; },
+    40: function() { if (probability(Drone.controlStrength())) Drone.person.itemInteract(); },
     32: function() { Drone.attemptControl(); }
   }
 }
