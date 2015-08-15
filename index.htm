@@ -1,7 +1,12 @@
 <!DOCTYPE HTML>
 <html>
-  <body style="margin:0;">
+  <body style="margin:0; text-align: center;">
     <canvas id="game_canvas"></canvas>
+    <h2>OVERPOWERED</h2>
+    <h4>Controls</h4>
+    <p>Move with <em>A, W, S, D</em></p>
+    <p>Press <em>space</em> take control of a human <br />(must be in range of control signal)</p>
+    <p>Move your human with <em>&larr;, &rarr;</em></p>
   </body>
   
   <script type="text/javascript" src="shortcuts.js"></script>
@@ -25,9 +30,12 @@
       window.loop_objects = [environment, Player, Drone];
 
       // `temp sample people
-      loop_objects.push(new Person(xy(4, 3)));
-      loop_objects.push(new Person(xy(5, 3)));
-      loop_objects.push(new Person(xy(5.5, 3)));
+      loop_objects.push(new Person(xy(14, 3)));
+      loop_objects.push(new Person(xy(15, 3)));
+      loop_objects.push(new Person(xy(15.5, 3)));
+
+      Drone.control(new Person(xy(Drone.actor.p.x, 3)));
+      loop_objects.push(Drone.person);
 
       environment.generate();
       

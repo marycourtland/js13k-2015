@@ -2,6 +2,7 @@
 
 function Person(loc) {
   this.actor = new Actor(loc);
+  this.color = '#000'
 
   this.tick = function() { tickity(this.actor); }
 
@@ -10,7 +11,7 @@ function Person(loc) {
       // `crunch 
       {x: this.actor.p.x - person_size.x/2, y: this.actor.p.y},
       {x: this.actor.p.x + person_size.x/2, y: this.actor.p.y + person_size.y},
-      draw.shapeStyle('#000')
+      draw.shapeStyle(this.color)
     );
   }
 }

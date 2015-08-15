@@ -14,9 +14,17 @@ var draw = {
     ctx.restore();
   },
 
-  lineStyle: function(color, lw) { return {strokeStyle: color, lineWidth: lw || 1, strk: 1, fll: 0, cls: 0}; },
-  shapeStyle: function(color) { return {fillStyle: color, strk: 0, fll: 1, cls: 1}; },
+  shapeStyle: function(color, extra) {
+    var output = {fillStyle: color, strk: 0, fll: 1, cls: 1};
+    for (var s in extra) { output[s] = extra[s]; };
+    return output;
+  },
 
+  lineStyle: function(color, extra) {
+    var output = {strokeStyle: color, strk: 1, fll: 0, cls: 0, lineWidth: 0.1};
+    for (var s in extra) { output[s] = extra[s]; };
+    return output;
+  },
 
   // Clear
   clr: function(ctx) {

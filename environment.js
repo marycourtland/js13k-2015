@@ -33,7 +33,7 @@ var environment = {
   generate: function() {
     this.pts.push([this.xrange[0], 0]);
     for (var x = this.xrange[0]; x < this.xrange[1]; x += this.xres) {
-      this.y[x] = rnds(2.7, 3.3);
+      this.y[x] = rnds(2.9, 3.1);
       this.pts.push([x, this.y[x]]);
     }
     this.pts.push([this.xrange[1],0]);
