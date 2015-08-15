@@ -22,8 +22,9 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 
 // People
 ,   person_size = {x: 0.3, y: 0.6}
-,   person_color = '#511'
-,   controlled_person_color = '#200'
+,   person_color = '#000'
+,   controlled_person_color = '#300'
+,   person_interaction_window = 8
 
 
 // Drone

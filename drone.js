@@ -5,7 +5,11 @@ var Drone = {
   person: null,
   draw: function() {
     if (this.person) {
-      draw.l(ctx, this.actor.p, this.person.actor.p, draw.lineStyle('#9eb', {globalAlpha: this.controlStrength()}));
+      draw.l(ctx,
+        this.actor.p,
+        this.person.actor.p,
+        draw.lineStyle('#9eb', {globalAlpha: this.controlStrength()})
+      );
     }
     draw.r(ctx,
       // `crunch
@@ -15,9 +19,10 @@ var Drone = {
     );
   },
 
-  controlStrength: function() {
+  controlStrength: function(person) {
     // On scale from 0 to 1, depending on how near drone is to person
-    return 0.5 + Math.atan(20 - dist(this.actor.p, this.person.actor.p))/pi;
+    person = person || this.person;
+    return squared(0.5 + Math.atan(20 - dist(this.actor.p, person.actor.p))/pi);
   },
 
   uncontrol: function() {
@@ -28,7 +33,22 @@ var Drone = {
 
   control: function(person) {
     this.uncontrol(); // Only control one at a time!
-    person.color = controlled_person_color;
     this.person = person;
-  }                
+    this.person.color = controlled_person_color;
+  },
+
+  attemptControl: function() {
+    // square the control strength so that it's more limited
+    var person = this.getClosestPerson();
+    if (person && probability(squared(this.controlStrength(person)))) {
+      this.control(person);
+    }
+  },
+
+  getClosestPerson: function() {
+    if (close_people_per_tick.length === 0) { return null; }
+    return close_people_per_tick.reduce(function(closestPerson, nextPerson) {
+      return (nextPerson.drone_distance < closestPerson.drone_distance ? nextPerson : closestPerson);
+    }, {drone_distance:9999});
+  }
 }

@@ -2,7 +2,7 @@
 <html>
   <body style="margin:0; text-align: center;">
     <canvas id="game_canvas"></canvas>
-    <h2>OVERPOWERED</h2>
+    <h2>OVERPOWERED (working title)</h2>
     <h4>Controls</h4>
     <p>Move with <em>A, W, S, D</em></p>
     <p>Press <em>space</em> take control of a human <br />(must be in range of control signal)</p>
@@ -34,13 +34,13 @@
       loop_objects.push(new Person(xy(15, 3)));
       loop_objects.push(new Person(xy(15.5, 3)));
 
-      Drone.control(new Person(xy(Drone.actor.p.x, 3)));
+      Drone.control(new Person(xy(Drone.actor.p.x - 1, 3)));
       loop_objects.push(Drone.person);
 
       environment.generate();
       
-      state.on = true;
-      go();
+      gameplay_on = true;
+      wnd.requestAnimationFrame(go);
     };
 
   </script>
