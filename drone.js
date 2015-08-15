@@ -22,7 +22,7 @@ var Drone = {
   controlStrength: function(person) {
     // On scale from 0 to 1, depending on how near drone is to person
     person = person || this.person;
-    return squared(0.5 + Math.atan(20 - dist(this.actor.p, person.actor.p))/pi);
+    return 0.5 + Math.atan(20 - dist(this.actor.p, person.actor.p))/pi;
   },
 
   uncontrol: function() {
