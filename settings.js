@@ -40,10 +40,11 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 
 // HUD - positions are referenced from origin
 ,   hud_color = '#abb'
+,   hud_color_dark = '#355'
 ,   hud_red = '#811'
 ,   hud_green = '#161'
-,   energy_meter_position = {x: 3, y: 28.5}
-,   energy_meter_radius = 1
+,   energy_meter_position = xy(2, 28.5)
+,   energy_meter_size = xy(4, 0.5)
 
 
 ;
