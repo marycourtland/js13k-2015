@@ -30,6 +30,8 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 ,   drone_size = {x: 0.6, y: 0.4}
 ,   drone_color = '#EEE'
 ,   drone_drain_rate = 0.00005 // energy per frame
+,   drone_low_energy = 0.1
+,   drone_high_energy = 0.9
 
 // Items
 ,   battery_size = {x: 0.5, y: 0.3}
@@ -37,7 +39,9 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 
 
 // HUD - positions are referenced from origin
-,   hud_color = '#fff'
+,   hud_color = '#abb'
+,   hud_red = '#811'
+,   hud_green = '#161'
 ,   energy_meter_position = {x: 3, y: 28.5}
 ,   energy_meter_radius = 1
 
