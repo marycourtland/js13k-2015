@@ -2,8 +2,15 @@
 
 var Drone = function(loc) {
   this.p = loc;
+  this.energy = 1; // goes from 0 to 1
 
   this.person = null,
+
+  this.tick = function() {
+    this.__proto__.tick.apply(this);
+    this.energy -= drone_drain_rate;
+  }
+
   this.draw = function() {
     if (this.person) {
       draw.l(ctx,
@@ -21,7 +28,6 @@ var Drone = function(loc) {
   }
 
   this.controlStrength = function(person) {
-    return 1; // `TEMP
     // On scale from 0 to 1, depending on how near drone is to person
     person = person || this.person;
     return 0.5 + Math.atan(20 - dist(this.p, person.p))/pi;
@@ -55,4 +61,4 @@ var Drone = function(loc) {
   }
 }
 
-Drone.prototype - new Actor();
+Drone.prototype = new Actor();

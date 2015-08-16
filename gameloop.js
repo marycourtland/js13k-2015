@@ -26,10 +26,8 @@ function go(time) {
   loop_objects.forEach(drawity);
 
   debug("Drone controls: ", Player.drone.person);
-  debug("Close people:   ", close_people_per_tick);
-  debug("Close items:    ", close_items_per_tick);
-  debug("Battery1 held by:", battery1.container);
-  debug("Battery1 held by:", battery2.container);
+  debug("Person holds:   ", Player.drone.person ? Player.drone.person.inventory_item : null);
+  debug("Drone energy:   ", Player.drone.energy);
 
   debug(" "); debug(" ");
   if (gameplay_frame % debug_period === 0) console.groupEnd(); // `temp
