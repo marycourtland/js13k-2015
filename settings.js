@@ -19,6 +19,10 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 // Environment
 ,   environment_color = '#222' // Todo: maybe buildings should be a different color
 
+// Lightning
+,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
+,   lightning_chance_drone = 0.05   // Of each lightning strike, chance that it will hit the drone
+
 // People
 ,   person_size = {x: 0.3, y: 0.6}
 ,   person_color = '#000'

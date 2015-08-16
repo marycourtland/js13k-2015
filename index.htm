@@ -23,6 +23,7 @@
   <script type="text/javascript" src="people.js"></script>
   <script type="text/javascript" src="drone.js"></script>
   <script type="text/javascript" src="player.js"></script>
+  <script type="text/javascript" src="lightning.js"></script>
 
   <script type="text/javascript" src="items.js"></script>
   <script type="text/javascript" src="batteries.js"></script>
@@ -32,7 +33,7 @@
 
   <script type="text/javascript">
     wnd.onload = function() {
-      window.loop_objects = [environment, Player, Player.drone];
+      window.loop_objects = [environment, Player, Player.drone, lightning];
 
       // `temp sample people/items
       loop_objects.push(new Person(xy(14, 3)));

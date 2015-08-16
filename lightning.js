@@ -7,6 +7,8 @@ lightning = {
     if (this.timeleft >= 0) {
       this.timeleft -= 1;
     }
+
+    if (probability(lightning_chance)) { this.strike(); }
   },
   draw: function() {
     if (this.timeleft < 0) { return; }
