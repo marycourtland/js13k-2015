@@ -13,7 +13,6 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
         [0.85, '#17182a'],
         [0.7, '#1f2035'],
         [0.4, '#433b4b'],
-        // [0.2, '#765955'],
         [0.0, '#a16e4f']
     ]
 
@@ -33,5 +32,5 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 
 // Items
 ,   battery_size = {x: 0.5, y: 0.3}
-,   give_distance = 1.2
+,   interaction_distance = 1.2
 ;

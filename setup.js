@@ -11,3 +11,4 @@ canvas.setAttribute("height", game_size.y * game_scale.y);
 // note: it will move left/right as the player moves camera
 ctx.setTransform(game_scale.x, 0, 0, -game_scale.y, 0, game_size.y * game_scale.y);
 ctx.lineWidth = 0;
+

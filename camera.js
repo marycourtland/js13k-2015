@@ -8,7 +8,7 @@ function moveCameraBy(xy) {
 function checkCamera() {
 
   // Focus camera on drone
-  var dx = Drone.actor.p.x - origin.x, dy = Drone.actor.p.y - origin.y;
+  var dx = Player.drone.p.x - origin.x, dy = Player.drone.p.y - origin.y;
   if (dx < camera_margin.x) { moveCameraBy(xy(-dx, 0)); }
   if ((game_size.x - dx) < camera_margin.x) { moveCameraBy(xy(game_size.x - dx, 0)); }
 }

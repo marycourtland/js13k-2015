@@ -2,12 +2,13 @@
 
 function Battery(loc) {
   this.item = new Item(loc);
+  this.p = loc;
 
-  this.tick = function() { tickity(this.item); }
+  // tick is performed by item object
 
   this.draw = function() {
     var fill = draw.shapeStyle(this.color);
-    var p = this.item.p;
+    var p = this.p;
 
     draw.r(ctx,
       // `crunch
@@ -29,8 +30,11 @@ function Battery(loc) {
   }
 
   this.use = function() {
+    // Batteries get used by the drone
     // `todo (when energy stuff is implemented): fill drone battery level
+    if (dist(this.p, Player.drone.p) > interaction_distance) { return; }
     loopDestroy(this);
-    if (this.item.heldBy) this.item.heldBy.drop();
+    if (this.container) this.container.drop();
   }
 }
+Battery.prototype = new Item();
