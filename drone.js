@@ -59,6 +59,10 @@ var Drone = function(loc) {
       return (nextPerson.drone_distance < closestPerson.drone_distance ? nextPerson : closestPerson);
     }, {drone_distance:9999});
   }
+
+  this.fillEnergy = function() {
+    this.energy = 1;
+  }
 }
 
 Drone.prototype = new Actor();

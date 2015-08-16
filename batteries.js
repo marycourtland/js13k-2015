@@ -35,6 +35,7 @@ function Battery(loc) {
     if (dist(this.p, Player.drone.p) > interaction_distance) { return; }
     loopDestroy(this);
     if (this.container) this.container.drop();
+    Player.drone.fillEnergy();
   }
 }
 Battery.prototype = new Item();
