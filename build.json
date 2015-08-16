@@ -1,0 +1,18 @@
+{
+  "files": [
+    "shortcuts.js",
+    "drawing.js",
+    "settings.js",
+    "setup.js",
+    "camera.js",
+    "environment.js",
+    "actors.js",
+    "people.js",
+    "drone.js",
+    "player.js",
+    "items.js",
+    "batteries.js",
+    "events.js",
+    "gameloop.js"
+  ]
+}
