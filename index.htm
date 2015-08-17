@@ -28,12 +28,13 @@
   <script type="text/javascript" src="items.js"></script>
   <script type="text/javascript" src="batteries.js"></script>
 
+  <script type="text/javascript" src="hud.js"></script>
   <script type="text/javascript" src="events.js"></script>
   <script type="text/javascript" src="gameloop.js"></script>
 
   <script type="text/javascript">
     wnd.onload = function() {
-      window.loop_objects = [environment, Player, Player.drone, lightning];
+      window.loop_objects = [environment, Player, Player.drone, lightning, Hud];
 
       // `temp sample people/items
       loop_objects.push(new Person(xy(14, 3)));
@@ -41,7 +42,7 @@
       loop_objects.push(new Person(xy(15.5, 3)));
 
       window.battery1 = new Battery(xy(25, 3));
-      window.battery2 = new Battery(xy(26, 3));
+      window.battery2 = new Battery(xy(28, 3));
       loop_objects.push(battery1);
       loop_objects.push(battery2);
 

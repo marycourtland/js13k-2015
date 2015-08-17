@@ -15,11 +15,26 @@ function Person(loc) {
   }
 
   this.draw = function() {
+    // `CRUNCH
+    var fill = draw.shapeStyle(this.color);
+    var radius = person_size.x/3;
     draw.r(ctx,
       // `crunch 
-      {x: this.p.x - person_size.x/2, y: this.p.y},
-      {x: this.p.x + person_size.x/2, y: this.p.y + person_size.y},
-      draw.shapeStyle(this.color)
+      xy(this.p.x - person_size.x/2, this.p.y),
+      xy(this.p.x + person_size.x/2, this.p.y + person_size.y - radius),
+      fill
+    );
+
+    draw.c(ctx,
+      xy(this.p.x, this.p.y + person_size.y - radius),
+      radius,
+      fill
+    );
+
+    draw.c(ctx,
+      xy(this.p.x, this.p.y + person_size.y + radius),
+      radius,
+      fill
     );
   }
 

@@ -2,22 +2,10 @@
 // it moves stuff around
 
 var Player = {
-  drone: new Drone(xy(10, 10)),
+  drone: new Drone(xy(10, 10.05)),
 
   draw: function() {
-    draw.r(ctx,
-      energy_meter_position,
-      vec_add(energy_meter_position, energy_meter_size),
-      draw.shapeStyle(hud_color_dark)
-    );
-    
-    draw.r(ctx,
-      energy_meter_position,
-      vec_add(energy_meter_position, xy(energy_meter_size.x * this.drone.energy, energy_meter_size.y)),
-      draw.shapeStyle(hud_color)
-    );
 
-    // `todo: include a percentage next to the bar
   },
 
   inputControlMap: { // `crunch `crunch `crunch
