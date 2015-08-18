@@ -24,6 +24,9 @@ var wnd = window
   if (typeof b === 'undefined') { b = a; a = 0; }
     return a + rnd() * (b - a);
   }
+, rnd_choice = function(array) {
+    return array[Math.floor(rnds(array.length))];
+  }
 , probability = function(n) { return rnd() < n; }
 , vec_add = function(p1, p2) {
     return xy(p1.x + p2.x, p1.y + p2.y)
