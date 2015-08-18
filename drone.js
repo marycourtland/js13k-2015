@@ -3,12 +3,18 @@
 var Drone = function(loc) {
   this.p = loc;
   this.energy = 1; // goes from 0 to 1
+  this.powered = true;
+  this.rpm_scale = 1;
 
   this.person = null,
 
   this.tick = function() {
     this.__proto__.tick.apply(this);
-    this.energy -= drone_drain_rate;
+    this.energy = max(this.energy - drone_drain_rate, 0);
+
+    if (this.energy == 0) {
+      this.die();
+    }
   }
 
   this.draw = function() {
@@ -59,15 +65,15 @@ var Drone = function(loc) {
     }
 
     var f = 0.8;
-    drawBlade(drone_arm_size.x - 0.05, sin(f * gameplay_frame));
-    // drawBlade(0, cos(f * gameplay_frame));
-    drawBlade(-drone_arm_size.x + 0.05, sin(f * gameplay_frame));
+    drawBlade(drone_arm_size.x - 0.05, this.rpm_scale * sin(f * gameplay_frame));
+    drawBlade(-drone_arm_size.x + 0.05, this.rpm_scale * sin(f * gameplay_frame));
+  }
 
-    // Four blades - this looks better with longer arm size (0.6)
-    // drawBlade(drone_arm_size.x, sin(f * gameplay_frame));
-    // drawBlade(drone_arm_size.x/2.5, cos(f * gameplay_frame));
-    // drawBlade(-drone_arm_size.x/2.5, sin(f * gameplay_frame));
-    // drawBlade(-drone_arm_size.x, cos(f * gameplay_frame));
+  this.die = function() {
+      this.gravity = true;
+      this.powered = false;
+      this.rpm_scale = 0;
+
   }
 
   this.controlStrength = function(person) {

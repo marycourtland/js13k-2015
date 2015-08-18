@@ -3,7 +3,7 @@
 var wnd = window
 , doc = document
 , $ = function () { return doc.querySelector.apply(doc, arguments); }
-
+, reqAnimFrame = wnd.requestAnimationFrame || wnd.mozRequestAnimationFrame
 
 
 // Math ==============================================================

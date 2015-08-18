@@ -3,6 +3,11 @@
 var Hud = {
   draw: function() {
     this.drawEnergyDisplay();
+    if (gameplay_frame % 20 === 0) { this.fillInfo(); }
+  },
+
+  fillInfo: function() {
+    $("#game-info #fps").textContent = Math.round(avg_fps * 10)/10;
   },
 
   drawEnergyDisplay: function() {
