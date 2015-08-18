@@ -19,7 +19,7 @@ lightning = {
     var x = rnds(game_size.x + origin.x), y = game_size.y;
     this.pts = [[x, y]];
     var p = 0;
-    while (y > 0) {
+    while (y > environment.y0) {
       x += rnds(-0.4, 0.4);
       y -= rnds(0.5, 1);
       this.pts.push([x, y]);

@@ -22,7 +22,7 @@ var Drone = function(loc) {
     if (this.person) {
       draw.l(ctx,
         p,
-        this.person.p,
+        vec_add(this.person.p, xy(0, person_size.y)),
         draw.lineStyle('#9eb', {globalAlpha: this.controlStrength()})
       );
     }
