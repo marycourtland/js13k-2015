@@ -13,8 +13,8 @@ var Player = {
     // ADSW directions for drone
     65: function() { Player.drone.p.x -= 1; },
     68: function() { Player.drone.p.x += 1; },
-    83: function() { Player.drone.p.y -= 1; },
-    87: function() { Player.drone.p.y += 1; },
+    83: function() { Player.drone.powerDown(); },
+    87: function() { Player.drone.powerUp(); },
     37: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x -= 1; },
     39: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x += 1; },
     40: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.itemInteract(); },

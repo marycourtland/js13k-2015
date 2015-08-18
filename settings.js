@@ -21,7 +21,8 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 
 // Dynamics
 // *** Gravity estimate is very sensitive to FPS measurement
-,   gravAccel = function() { return xy(0, -9.8 / 2 / (avg_fps * avg_fps))} // 9.8 m/s^2 translated to units/frame^2
+,   min_dynamics_frame = 5
+,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / min(max(avg_fps * avg_fps, 0), 1000))} // 9.8 m/s^2 translated to units/frame^2
 
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
@@ -54,8 +55,9 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 ,   hud_color_dark = '#355'
 ,   hud_red = '#811'
 ,   hud_green = '#161'
+,   hud_dial_radius = 1
 ,   energy_meter_position = xy(2, 28.5)
 ,   energy_meter_size = xy(4, 0.5)
-
+,   rpm_meter_position = xy(10, 28.5)
 
 ;
