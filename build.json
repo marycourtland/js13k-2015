@@ -10,9 +10,12 @@
     "people.js",
     "drone.js",
     "player.js",
+    "lightning.js",
     "items.js",
     "batteries.js",
+    "hud.js",
     "events.js",
-    "gameloop.js"
+    "gameloop.js",
+    "run.js"
   ]
 }
