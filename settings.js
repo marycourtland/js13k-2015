@@ -1,9 +1,9 @@
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = {x: 20, y: 20} // pixels > game units conversion
-,   game_size = {x: wnd.innerWidth/game_scale.x, y: 30}
-,   camera_margin = {x: 4, y: 4}
+var game_scale = xy(20, 20) // pixels -> game units conversion
+,   game_size = xy(wnd.innerWidth/game_scale.x, 30)
+,   camera_margin = xy(4, 4)
 
 
 // Aesthetic stuff
@@ -17,7 +17,11 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
     ]
 
 // Environment
-,   environment_color = '#222' // Todo: maybe buildings should be a different color
+,   environment_color = '#222'
+,   building_color = '#333'
+,   num_building_clumps = 10
+,   num_buildings_per_clump = 6
+,   building_clump_width = 40
 
 // Dynamics
 // *** Gravity estimate is very sensitive to FPS measurement
