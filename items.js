@@ -10,7 +10,7 @@ function Item(loc) {
 
 Item.prototype.tick = function() {
   if (this.container) {
-    this.p = vec_add(this.container.p, xy(0.45, 0.1));
+    this.p = vec_add(this.container.p, xy(0.45, 0.2));
   }
   else if (Player.drone.person) {
     // `crunch. This is basically the same as the person/drone stuff in people.js

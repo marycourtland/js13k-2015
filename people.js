@@ -6,8 +6,32 @@ function Person(loc) {
   this.drone_distance = null; // only relevant when person is within the interaction window
   this.inventory_item = null; // each person can only hold 1 thing at a time
 
+  this.behaviors = {
+    idle: function(start) {
+      // do nothing
+      if (start) { this.v = xy(0, 0); }
+      return;
+    },
+
+    amble: function(start) {
+      if (Player.drone.person === this) { return; }
+      // Set a new velocity
+      if (start) { this.v = xy(rnds(-1, 1) / 20, 0); }
+    }
+  }
+
+  this.switchBehavior = function(new_behavior) {
+    if (!new_behavior) {
+      // Switch between walking and idle
+      new_behavior = this.current_behavior === 'amble' ? 'idle' : 'amble'
+    }
+    // For now, choose another behavior at random
+    this.current_behavior = new_behavior 
+    this.current_behavior_timeleft = rnds(50, 100);
+  };
+  
   this.tick = function() {
-    tickity(this.__proto__);
+    this.__proto__.tick.apply(this);
     if (abs(Player.drone.p.x - this.p.x) < person_interaction_window) {
       close_people_per_tick.push(this);
       this.drone_distance = dist(this.p, Player.drone.p);
@@ -15,11 +39,33 @@ function Person(loc) {
   }
 
   this.draw = function() {
+    // `CRUNCH
+    var fill = draw.shapeStyle(this.color);
+    var radius = person_size.x/3;
+    var x1_offset_scale = this.v.x < 0 ? 1/3 : 1/2;
+    var x2_offset_scale = this.v.x > 0 ? 1/3 : 1/2;
+
+
+    var x1 = this.v.x < 0 ? this.p.x : this.p.x - person_size.x/2;
+    var x2 = this.v.x > 0 ? this.p.x : this.p.x + person_size.x/2;
+
     draw.r(ctx,
       // `crunch 
-      {x: this.p.x - person_size.x/2, y: this.p.y},
-      {x: this.p.x + person_size.x/2, y: this.p.y + person_size.y},
-      draw.shapeStyle(this.color)
+      xy(this.p.x - person_size.x * x1_offset_scale, this.p.y),
+      xy(this.p.x + person_size.x * x2_offset_scale, this.p.y + person_size.y - radius),
+      fill
+    );
+
+    draw.c(ctx,
+      xy(this.p.x, this.p.y + person_size.y - radius),
+      radius,
+      fill
+    );
+
+    draw.c(ctx,
+      xy(this.p.x, this.p.y + person_size.y + radius),
+      radius,
+      fill
     );
   }
 
@@ -61,5 +107,7 @@ function Person(loc) {
       return (nextItem.person_distance < closestItem.person_distance ? nextItem : closestItem);
     }, {person_distance:9999});
   }
+
+
 }
-Person.protoype = new Actor();
+Person.prototype = new Actor();

@@ -3,7 +3,7 @@
 var wnd = window
 , doc = document
 , $ = function () { return doc.querySelector.apply(doc, arguments); }
-
+, reqAnimFrame = wnd.requestAnimationFrame || wnd.mozRequestAnimationFrame
 
 
 // Math ==============================================================
@@ -23,6 +23,9 @@ var wnd = window
 , rnds = function(a, b) {
   if (typeof b === 'undefined') { b = a; a = 0; }
     return a + rnd() * (b - a);
+  }
+, rnd_choice = function(array) {
+    return array[Math.floor(rnds(array.length))];
   }
 , probability = function(n) { return rnd() < n; }
 , vec_add = function(p1, p2) {

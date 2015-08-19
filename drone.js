@@ -3,28 +3,77 @@
 var Drone = function(loc) {
   this.p = loc;
   this.energy = 1; // goes from 0 to 1
+  this.powered = true;
+  this.rpm_scale = 1;
 
   this.person = null,
 
   this.tick = function() {
     this.__proto__.tick.apply(this);
-    this.energy -= drone_drain_rate;
+    this.energy = max(this.energy - drone_drain_rate, 0);
+
+    if (this.energy == 0) {
+      this.die();
+    }
   }
 
   this.draw = function() {
+    // `CRUNCH: This whole method
+
+    var p = this.p;
+    var fill = draw.shapeStyle(drone_color);
+    var strk = draw.lineStyle(drone_color, {lineWidth: drone_arm_size.y});
+
+    // signal to person
     if (this.person) {
       draw.l(ctx,
-        this.p,
-        this.person.p,
+        p,
+        vec_add(this.person.p, xy(0, person_size.y)),
         draw.lineStyle('#9eb', {globalAlpha: this.controlStrength()})
       );
     }
+
+    // body
     draw.r(ctx,
       // `crunch
-      {x: this.p.x - drone_size.x/2, y: this.p.y - drone_size.y/2},
-      {x: this.p.x + drone_size.x/2, y: this.p.y + drone_size.y/2},
-      draw.shapeStyle('#000')
+      xy(p.x - drone_body_size.x/2, p.y - drone_body_size.y/2),
+      xy(p.x + drone_body_size.x/2, p.y + drone_body_size.y/2),
+      fill
     );
+
+    // arms
+    draw.l(ctx,
+      xy(p.x - drone_arm_size.x, p.y + drone_body_size.y/2 + drone_arm_size.y/2),
+      xy(p.x + drone_arm_size.x, p.y + drone_body_size.y/2 + drone_arm_size.y/2),
+      strk
+    )
+
+
+    // copter blades above arms
+    function drawBlade(xpos, xscale) {
+      // `crunch
+      draw.r(ctx,
+        xy(p.x + xpos - xscale * drone_blade_size.x/2, p.y + drone_body_size.y/2 + drone_arm_size.y + 0.05),
+        xy(p.x + xpos + xscale * drone_blade_size.x/2, p.y + drone_body_size.y/2 + drone_arm_size.y + 0.05 + drone_blade_size.y),
+        fill
+      );
+      draw.l(ctx,
+        xy(p.x + xpos, p.y + drone_body_size.y/2 + drone_arm_size.y/2),
+        xy(p.x + xpos, p.y + drone_body_size.y/2 + drone_arm_size.y + 0.1),
+        strk
+      )
+    }
+
+    var f = 0.8;
+    drawBlade(drone_arm_size.x - 0.05, this.rpm_scale * sin(f * gameplay_frame));
+    drawBlade(-drone_arm_size.x + 0.05, this.rpm_scale * sin(f * gameplay_frame));
+  }
+
+  this.die = function() {
+      this.gravity = true;
+      this.powered = false;
+      this.rpm_scale = 0;
+
   }
 
   this.controlStrength = function(person) {
