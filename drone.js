@@ -5,6 +5,8 @@ var Drone = function(loc) {
   this.energy = 1; // goes from 0 to 1
   this.powered = true;
   this.rpm_scale = 1;
+  this.control_t0 = 0;
+  this.control_signal_target = [];
 
   this.person = null,
 
@@ -25,12 +27,13 @@ var Drone = function(loc) {
     var strk = draw.lineStyle(drone_color, {lineWidth: drone_arm_size.y});
 
     // signal to person
-    if (this.person) {
+    if (this.control_signal_target) {
       draw.l(ctx,
         p,
-        vec_add(this.person.p, xy(0, person_size.y)),
-        draw.lineStyle('#9eb', {globalAlpha: this.controlStrength()})
+        this.control_signal_target,
+        draw.lineStyle(drone_signal_color, {globalAlpha: this.controlStrength()})
       );
+      this.control_signal_target = null; // to be re-set
     }
 
     // body
@@ -85,20 +88,33 @@ var Drone = function(loc) {
   this.uncontrol = function() {
     if (!this.person) return;
     this.person.color = person_color;
+    this.person.control_level = 0;
     this.person = null;
   }
 
-  this.control = function(person) {
+  this.controlFull = function(person) {
     this.uncontrol(); // Only control one at a time!
     this.person = person;
     this.person.color = controlled_person_color;
+    this.person.control_level = 1;
+    // Once a person is fully controlled, their resistance drops very low
+    this.person.resistance = min_person_resistance;
   }
 
   this.attemptControl = function() {
     // square the control strength so that it's more limited
     var person = this.getClosestPerson();
     if (person && probability(squared(this.controlStrength(person)))) {
-      this.control(person);
+      person.control_level += person_control_rate * 2; // multiplied by two to counteract the decay
+      this.control_signal_target = vec_add(person.p, xy(0, person_size.y));
+    }
+    else {
+      this.control_signal_target = null;
+    }
+
+    // If the control level on the person exceeds their resistance, the person has been overpowered
+    if (person.control_level >= person.resistance) {
+      this.controlFull(person);
     }
   }
 

@@ -40,6 +40,7 @@ var wnd = window
 }
 
 // other stuff...
+, resetify = function(item) { if (item.reset) item.reset(); }
 , tickity = function(item) { if (item.tick) item.tick(); }
 , drawity = function(item) { if (item.draw) item.draw(); }
 

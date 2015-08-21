@@ -19,6 +19,9 @@ var Player = {
     39: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x += 1; },
     40: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.itemInteract(); },
     38: function() { Player.drone.person.useItem(); },
-    32: function() { Player.drone.attemptControl(); }
+    32: function() {
+      // Player must hold down spacebar for the requisite length of time
+      Player.drone.attemptControl();
+    }
   }
 }

@@ -4,7 +4,7 @@
 var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   game_size = xy(wnd.innerWidth/game_scale.x, 30)
 ,   camera_margin = xy(4, 4)
-
+,   units_per_meter = 2 // for realistic size conversions
 
 // Aesthetic stuff
 ,   backgroundGradient = [
@@ -18,7 +18,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 
 // Environment
 ,   environment_color = '#222'
-,   building_color = '#333'
+,   building_color = '#444'
 ,   num_building_clumps = 10
 ,   num_buildings_per_clump = 6
 ,   building_clump_width = 40
@@ -35,6 +35,8 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   person_size = xy(0.3, 0.6)
 ,   person_color = '#000'
 ,   controlled_person_color = '#300'
+,   person_control_rate = 0.05 // rate at which control level increases or drops
+,   min_person_resistance = 2 * person_control_rate
 ,   person_interaction_window = 8
 
 
@@ -43,6 +45,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   drone_arm_size = xy(0.4, 0.05) // from center
 ,   drone_blade_size = xy(0.5, 0.1)
 ,   drone_color = '#000'
+,   drone_signal_color = '#9eb'
 ,   drone_drain_rate = 0.00005 // energy per frame
 ,   drone_low_energy = 0.1
 ,   drone_high_energy = 0.9
