@@ -1,10 +1,10 @@
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = {x: 20, y: 20} // pixels > game units conversion
-,   game_size = {x: wnd.innerWidth/game_scale.x, y: 30}
-,   camera_margin = {x: 4, y: 4}
-
+var game_scale = xy(20, 20) // pixels -> game units conversion
+,   game_size = xy(wnd.innerWidth/game_scale.x, 30)
+,   camera_margin = xy(4, 4)
+,   units_per_meter = 2 // for realistic size conversions
 
 // Aesthetic stuff
 ,   backgroundGradient = [
@@ -17,7 +17,16 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
     ]
 
 // Environment
-,   environment_color = '#222' // Todo: maybe buildings should be a different color
+,   environment_color = '#222'
+,   building_color = '#444'
+,   num_building_clumps = 10
+,   num_buildings_per_clump = 6
+,   building_clump_width = 40
+
+// Dynamics
+// *** Gravity estimate is very sensitive to FPS measurement
+,   min_dynamics_frame = 5
+,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / min(max(avg_fps * avg_fps, 0), 1000))} // 9.8 m/s^2 translated to units/frame^2
 
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
@@ -27,6 +36,8 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 ,   person_size = xy(0.3, 0.6)
 ,   person_color = '#000'
 ,   controlled_person_color = '#300'
+,   person_control_rate = 0.05 // rate at which control level increases or drops
+,   min_person_resistance = 2 * person_control_rate
 ,   person_interaction_window = 8
 
 
@@ -35,6 +46,7 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 ,   drone_arm_size = xy(0.4, 0.05) // from center
 ,   drone_blade_size = xy(0.5, 0.1)
 ,   drone_color = '#000'
+,   drone_signal_color = '#9eb'
 ,   drone_drain_rate = 0.00005 // energy per frame
 ,   drone_low_energy = 0.1
 ,   drone_high_energy = 0.9
@@ -50,8 +62,9 @@ var game_scale = {x: 20, y: 20} // pixels > game units conversion
 ,   hud_color_dark = '#355'
 ,   hud_red = '#811'
 ,   hud_green = '#161'
+,   hud_dial_radius = 1
 ,   energy_meter_position = xy(2, 28.5)
 ,   energy_meter_size = xy(4, 0.5)
-
+,   rpm_meter_position = xy(10, 28.5)
 
 ;

@@ -1,14 +1,19 @@
 <!DOCTYPE HTML>
 <html>
-  <body style="margin:0; text-align: center;">
+  <body style="margin:0;">
     <canvas id="game_canvas"></canvas>
-    <h2>OVERPOWERED (working title)</h2>
-    <h4>Controls</h4>
-    <p>Move with <em>A, W, S, D</em></p>
-    <p>Press <em>space</em> take control of a human <br />(must be in range of control signal)</p>
-    <p>Move your human with <em>&larr;, &rarr;</em></p>
-    <p>Make your human hold/drop items with <em>&darr;</em></p>
-    <p>Retrieve items from your human with <em>&uarr;</em></p>
+    <div style="margin-left: 20px">
+      <h2>OVERPOWERED (working title)</h2>
+      <div id="game-info">
+        <p>FPS: <span id="fps"></span></p>
+      </div>
+      <h4>Controls</h4>
+      <p>Move with <em>A, W, S, D</em></p>
+      <p>Hold <em>space</em> start taking control of a human <br />(must be in range of control signal)</p>
+      <p>Move your human with <em>&larr;, &rarr;</em></p>
+      <p>Make your human hold/drop items with <em>&darr;</em></p>
+      <p>Retrieve items from your human with <em>&uarr;</em></p>
+    </div>
   </body>
   
   <script type="text/javascript" src="shortcuts.js"></script>
@@ -31,37 +36,5 @@
   <script type="text/javascript" src="hud.js"></script>
   <script type="text/javascript" src="events.js"></script>
   <script type="text/javascript" src="gameloop.js"></script>
-
-  <script type="text/javascript">
-    wnd.onload = function() {
-      window.loop_objects = [environment, Player, Player.drone, lightning, Hud];
-
-      // `temp sample people/items
-      window.p1 = new Person(xy(14, 3));
-      window.p2 = new Person(xy(18, 3));
-      window.p3 = new Person(xy(27, 3));
-      p1.v = xy(0.05, 0);
-      p3.v = xy(-0.05, 0);
-
-      loop_objects.push(p1);
-      loop_objects.push(p2);
-      loop_objects.push(p3);
-
-      window.battery1 = new Battery(xy(25, 3));
-      window.battery2 = new Battery(xy(28, 3));
-      loop_objects.push(battery1);
-      loop_objects.push(battery2);
-
-      console.log('DRONE:', Player.drone)
-
-      Player.drone.control(new Person(xy(Player.drone.p.x  + 3, 3)));
-      loop_objects.push(Player.drone.person);
-
-      environment.generate();
-      
-      gameplay_on = true;
-      wnd.requestAnimationFrame(go);
-    };
-
-  </script>
+  <script type="text/javascript" src="run.js"></script>
 </html>
