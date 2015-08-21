@@ -10,6 +10,7 @@ function Actor(p) {
   this.tick = function() {
     this.p.x += this.v.x;
     this.p.y += this.v.y;
+
     if (this.gravity) {
       this.v = vec_add(this.v, gravAccel());
     }
@@ -17,7 +18,10 @@ function Actor(p) {
     // Ground collision
     if (this.p.y < environment.y0) {
       this.p.y = environment.y0;
-      this.v.y = 0;
+
+      // Don't do this every frame so that actor doesn't get stuck
+      this.v.y = max(this.v.y, 0);
+      this.color = 'red';
     }
 
     this.handleBehavior();

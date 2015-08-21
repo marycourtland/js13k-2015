@@ -32,7 +32,6 @@ var wnd = window
     return xy(p1.x + p2.x, p1.y + p2.y)
   }
 , polar2cart = function(p) {
-  debug("COORDS:", p.r, p.th, cos(p.th), sin(p.th))
   return xy(
     p.r * cos(p.th),
     p.r * sin(p.th)
@@ -40,6 +39,7 @@ var wnd = window
 }
 
 // other stuff...
+, resetify = function(item) { if (item.reset) item.reset(); }
 , tickity = function(item) { if (item.tick) item.tick(); }
 , drawity = function(item) { if (item.draw) item.draw(); }
 
