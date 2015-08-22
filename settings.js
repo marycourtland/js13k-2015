@@ -50,6 +50,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   drone_drain_rate = 0.00005 // energy per frame
 ,   drone_low_energy = 0.1
 ,   drone_high_energy = 0.9
+,   drone_max_sideways_accel = 0.01
 
 // Items
 ,   battery_size = {x: 0.5, y: 0.3}
