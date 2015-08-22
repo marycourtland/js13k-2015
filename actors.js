@@ -38,6 +38,7 @@ function Actor(p) {
 
   this.current_behavior = 'idle';
   this.current_behavior_timeleft = -1;
+  this.current_behavior_params = {};
 
   this.handleBehavior = function() {
     this.current_behavior_timeleft -= 1;
