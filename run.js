@@ -16,8 +16,8 @@ wnd.onload = function() {
     battery1, battery2,
     Player.drone, Player.drone.person, Player,
     p1, p2, p3,
-    environment,
-    lightning, Hud
+    environment, lightning,
+    Camera, Hud
   ];
   environment.generate();
   

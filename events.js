@@ -6,6 +6,5 @@ window.addEventListener("keydown", function(event) {
   if (event.which in Player.inputControlMap) {
     //event.preventDefault();
     Player.inputControlMap[event.which]();
-    checkCamera();
   }
 });

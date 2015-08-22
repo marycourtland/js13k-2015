@@ -39,6 +39,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   person_control_rate = 0.05 // rate at which control level increases or drops
 ,   min_person_resistance = 2 * person_control_rate
 ,   person_interaction_window = 8
+,   interaction_distance = 1
 
 
 // Drone
@@ -50,11 +51,11 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   drone_drain_rate = 0.00005 // energy per frame
 ,   drone_low_energy = 0.1
 ,   drone_high_energy = 0.9
+,   drone_max_sideways_accel = 0.01
 
 // Items
 ,   battery_size = {x: 0.5, y: 0.3}
 ,   battery_color = "#000"
-,   interaction_distance = 1.2
 
 
 // HUD - positions are referenced from origin

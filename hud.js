@@ -15,7 +15,7 @@ var Hud = {
 
   displays: {
     energy: function() {
-      var p = energy_meter_position;
+      var p = vec_add(energy_meter_position, origin);
       (new Battery()).drawRepr(p, hud_color, 2);
 
       p = vec_add(p, xy(1, 0.1));
@@ -51,7 +51,6 @@ var Hud = {
 
   drawDial: function(r, p0, dial_percent, green_range) {
     // Draw a dial. `crunch maybe
-    p0 = vec_add(origin, p0);
     var p1 = vec_add(p0, polar2cart(rth(r, 0)));
     var p2 = vec_add(p0, polar2cart(rth(r, pi)));
     var pe = vec_add(p0, polar2cart(rth(r*0.8, pi * (1- dial_percent))));
