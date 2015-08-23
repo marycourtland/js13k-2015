@@ -2,7 +2,7 @@
 
 // Game and camera settings
 var game_scale = xy(20, 20) // pixels -> game units conversion
-,   game_size = xy(wnd.innerWidth/game_scale.x, 30)
+,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 30)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
@@ -57,6 +57,10 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   battery_size = {x: 0.5, y: 0.3}
 ,   battery_color = "#000"
 
+
+// Ideas
+,   idea_scale = 0.8
+,   idea_color = "#ddd"
 
 // HUD - positions are referenced from origin
 ,   hud_color = '#abb'

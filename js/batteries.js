@@ -7,7 +7,7 @@ function Battery(loc) {
   // tick is performed by item object
 
   this.draw = function() {
-    this.drawRepr(this.p, battery_color, 1);
+    this.drawRepr(this.p, 1, draw.shapeStyle(battery_color));
   }
 
   this.use = function() {
@@ -19,8 +19,7 @@ function Battery(loc) {
     Player.drone.fillEnergy();
   },
 
-  this.drawRepr = function(p, color, scale) {
-    var fill = draw.shapeStyle(color);
+  this.drawRepr = function(p, scale, fill) {
     var radius = scale * battery_size.x / 2;
     var height = scale * battery_size.y;
 

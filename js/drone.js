@@ -52,16 +52,16 @@ var Drone = function(loc) {
     }
 
     // The drone itself
-    this.drawRepr(this.p, this.color, 1, this.getTilt());
+    this.drawRepr(this.p, 1, draw.shapeStyle(this.color), this.getTilt());
   }
 
-  this.drawRepr = function(p, color, scale, tilt) {
+  this.drawRepr = function(p, scale, fill, tilt) {
     // `CRUNCH: This whole method
+    tilt = tilt || 0;
     ctx.translate(p.x, p.y);
     ctx.rotate(-tilt);
 
-    var fill = draw.shapeStyle(this.color);
-    var strk = draw.lineStyle(this.color, {lineWidth: scale * drone_arm_size.y});
+    var strk = draw.lineStyle(fill.fillStyle, {lineWidth: scale * drone_arm_size.y});
 
     var width = scale * drone_body_size.x/2;
     var height = scale * drone_body_size.y/2;
@@ -183,6 +183,10 @@ var Drone = function(loc) {
     if (person && probability(squared(this.controlStrength(person)))) {
       person.control_level += person_control_rate * 2; // multiplied by two to counteract the decay
       this.control_signal_target = vec_add(person.p, xy(0, person_size.y));
+
+      // the person will notice the drone, so they'll get the idea of the drone
+      person.addIdea(wnd.ideas.drone);
+
     }
     else {
       this.control_signal_target = null;

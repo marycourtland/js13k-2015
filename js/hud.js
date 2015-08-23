@@ -16,7 +16,7 @@ var Hud = {
   displays: {
     energy: function() {
       var p = vec_add(energy_meter_position, origin);
-      (new Battery()).drawRepr(p, hud_color, 2);
+      (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color));
 
       p = vec_add(p, xy(1, 0.1));
 

@@ -141,7 +141,7 @@ var draw = {
 
 // Game and camera settings
 var game_scale = xy(20, 20) // pixels -> game units conversion
-,   game_size = xy(wnd.innerWidth/game_scale.x, 30)
+,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 30)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
@@ -322,6 +322,17 @@ var environment = {
   }
 }
 
+function Idea(name, options) {
+  options = options || {};
+  var null_function = function() {};
+
+  this.name = name;
+
+  // This drawing method will be drawn right above the people talking about it
+  // arguments: p, scale, style
+  this.drawRepr = options.draw || null_function;
+}
+
 // ACTORS ============================================================
 // they move around
 // ** parent object
@@ -386,14 +397,24 @@ function Actor(p) {
 
 // PEOPLE ============================================================
 
-function Person(loc) {
-  this.p = loc;
+function Person() {
+  this.p = xy(0, environment.y0);
   this.color = person_color;
   this.drone_distance = null; // only relevant when person is within the interaction window
   this.inventory_item = null; // each person can only hold 1 thing at a time
   this.resistance = rnd();
   this.control_level = 0;     // the person is fully controlled when this exceeds the resistance measure
   this.talking_dir = 0;
+
+  this.init = function(properties) {
+    for (var prop in properties) {
+      this[prop] = properties[prop];
+    }
+
+    this.addIdea(wnd.ideas.smalltalk);
+
+    return this;
+  }
 
 
   this.behaviors = {
@@ -427,6 +448,7 @@ function Person(loc) {
         // talk to the person
         this.v = xy(0, 0);
         this.talking_dir = abs(d)/d;
+        target_person.addIdea(this.latest_idea);
       }
     }
   }
@@ -448,6 +470,8 @@ function Person(loc) {
   };
 
 
+  // Game loop / drawing ========================================
+
   this.reset = function() {
     this.talking_dir = 0;
   }
@@ -468,8 +492,9 @@ function Person(loc) {
 
   this.draw = function() {
     var dir = this.v.x;
-    this.drawRepr(this.p, draw.shapeStyle(drone_signal_color, {globalAlpha: this.control_level * Player.drone.controlStrength(this)}), 1.5, dir);
-    this.drawRepr(this.p, draw.shapeStyle(this.color), 1, dir);
+    debug("PERSON DIR:", dir);
+    this.drawRepr(this.p, 1.5, draw.shapeStyle(drone_signal_color, {globalAlpha: this.control_level * Player.drone.controlStrength(this)}), dir);
+    this.drawRepr(this.p, 1, draw.shapeStyle(this.color), dir);
 
     if (this.talking_dir !== 0) {
       this.drawSpeechSquiggles(this.talking_dir);
@@ -477,9 +502,10 @@ function Person(loc) {
 
   }
 
-  this.drawRepr = function(p, fill, scale, dir) {
+  this.drawRepr = function(p, scale, fill, dir) {
     // Dir should be negative (person facing leftwards), 0 (forwards), or positive (rightwards)
     // `CRUNCH
+    dir = dir || 0;
 
     var scaled_size = xy(scale * person_size.x, scale * person_size.y);
     p = vec_add(p, xy(0, -(scaled_size.y - person_size.y)/2));
@@ -541,6 +567,8 @@ function Person(loc) {
 
   }
 
+  // Items ======================================================
+
   this.hold = function(item) {
     this.inventory_item = item;
     item.container = this;
@@ -581,7 +609,28 @@ function Person(loc) {
   }
 
 
+  // Ideas ======================================================
+
+  // Maps ideas => number of times the idea has come to them
+  this.ideas = {};
+  this.latest_idea = null; // most recent idea
+
+  this.hasIdea = function(idea) {
+    return idea.name in this.ideas;
+  }
+
+  this.addIdea = function(idea) {
+    if (idea === null) { return; }
+
+    if (!this.hasIdea(idea)) {
+      this.ideas[idea.name] = 0;
+    }
+    this.ideas[idea.name] += 1;
+    this.latest_idea = idea;
+  }
+
 }
+
 Person.prototype = new Actor();
 // THE DRONE =========================================================
 
@@ -637,16 +686,16 @@ var Drone = function(loc) {
     }
 
     // The drone itself
-    this.drawRepr(this.p, this.color, 1, this.getTilt());
+    this.drawRepr(this.p, 1, draw.shapeStyle(this.color), this.getTilt());
   }
 
-  this.drawRepr = function(p, color, scale, tilt) {
+  this.drawRepr = function(p, scale, fill, tilt) {
     // `CRUNCH: This whole method
+    tilt = tilt || 0;
     ctx.translate(p.x, p.y);
     ctx.rotate(-tilt);
 
-    var fill = draw.shapeStyle(this.color);
-    var strk = draw.lineStyle(this.color, {lineWidth: scale * drone_arm_size.y});
+    var strk = draw.lineStyle(fill.fillStyle, {lineWidth: scale * drone_arm_size.y});
 
     var width = scale * drone_body_size.x/2;
     var height = scale * drone_body_size.y/2;
@@ -768,6 +817,10 @@ var Drone = function(loc) {
     if (person && probability(squared(this.controlStrength(person)))) {
       person.control_level += person_control_rate * 2; // multiplied by two to counteract the decay
       this.control_signal_target = vec_add(person.p, xy(0, person_size.y));
+
+      // the person will notice the drone, so they'll get the idea of the drone
+      person.addIdea(wnd.ideas.drone);
+
     }
     else {
       this.control_signal_target = null;
@@ -896,7 +949,7 @@ function Battery(loc) {
   // tick is performed by item object
 
   this.draw = function() {
-    this.drawRepr(this.p, battery_color, 1);
+    this.drawRepr(this.p, 1, draw.shapeStyle(battery_color));
   }
 
   this.use = function() {
@@ -908,8 +961,7 @@ function Battery(loc) {
     Player.drone.fillEnergy();
   },
 
-  this.drawRepr = function(p, color, scale) {
-    var fill = draw.shapeStyle(color);
+  this.drawRepr = function(p, scale, fill) {
     var radius = scale * battery_size.x / 2;
     var height = scale * battery_size.y;
 
@@ -952,7 +1004,7 @@ var Hud = {
   displays: {
     energy: function() {
       var p = vec_add(energy_meter_position, origin);
-      (new Battery()).drawRepr(p, hud_color, 2);
+      (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color));
 
       p = vec_add(p, xy(1, 0.1));
 
@@ -1091,19 +1143,26 @@ function debug() {
 
 wnd.onload = function() {
 
+  // Global game ideas - things NPC people talk about to each other
+  wnd.ideas = {
+    smalltalk: new Idea('smalltalk'), // this is basically the null/default idea
+
+    drone: new Idea('drone', {
+      draw: Player.drone.drawRepr
+    })
+  }
+
   // `temp sample people/items
-  window.p1 = new Person(xy(14, 3));
-  window.p2 = new Person(xy(18, 3));
-  window.p3 = new Person(xy(27, 3));
-  p1.v = xy(0.05, 0);
-  p3.v = xy(-0.05, 0);
+  wnd.p1 = (new Person()).init({p: xy(14, 3), v: xy(0.05, 0)});
+  wnd.p2 = (new Person()).init({p: xy(18, 3)});
+  wnd.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
 
-  window.battery1 = new Battery(xy(25, 3));
-  window.battery2 = new Battery(xy(28, 3));
+  wnd.battery1 = new Battery(xy(25, 3));
+  wnd.battery2 = new Battery(xy(28, 3));
 
-  Player.drone.controlFull(new Person(xy(Player.drone.p.x  + 3, 3)));
+  Player.drone.controlFull((new Person()).init({p: xy(Player.drone.p.x  + 3, environment.y0)}));
 
-  window.loop_objects = [
+  wnd.loop_objects = [
     battery1, battery2,
     Player.drone, Player.drone.person, Player,
     p1, p2, p3,
