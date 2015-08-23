@@ -2,5 +2,5 @@
 *.sublime-workspace
 node_modules/.
 minified/.
-*.tar.gz
+*.zip
 build_output.js
