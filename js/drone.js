@@ -7,7 +7,7 @@ var Drone = function(loc) {
   this.powered = true;
   this.rpm_scale = 0.83;
   this.control_t0 = 0;
-  this.control_signal_target = [];
+  this.control_signal_target = null;
   this.rpm_scale = 0.83; // starting value
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
   this.color = 'black';
@@ -46,7 +46,7 @@ var Drone = function(loc) {
       draw.l(ctx,
         this.p,
         this.control_signal_target,
-        draw.lineStyle(drone_signal_color, {globalAlpha: this.controlStrength()})
+        draw.lineStyle(drone_signal_color, {globalAlpha: this.controlStrength(this.control_signal_target)})
       );
       this.control_signal_target = null; // to be re-set
     }
@@ -91,20 +91,21 @@ var Drone = function(loc) {
     function drawBlade(xpos, xscale) {
       // `crunch
       draw.r(ctx,
-        xy(+ xpos - xscale * blade_x, + height + arm_y*2 + 0.05),
-        xy(+ xpos + xscale * blade_x, + height + arm_y*2 + 0.05 + blade_y*2),
+        xy(xpos - xscale * blade_x, height + arm_y*2 + 0.05),
+        xy(xpos + xscale * blade_x, height + arm_y*2 + 0.05 + blade_y*2),
         fill
       );
       draw.l(ctx,
-        xy(+ xpos, + height + arm_y),
-        xy(+ xpos, + height + arm_y*2 + 0.1),
+        xy(xpos, height + arm_y),
+        xy(xpos, height + arm_y*2 + 0.1),
         strk
       )
     }
 
     var f = 0.8;
-    drawBlade(scale * drone_arm_size.x - 0.05, sin(f * gameplay_frame * this.rpm_scale));
-    drawBlade(-scale * drone_arm_size.x + 0.05, sin(f * gameplay_frame * this.rpm_scale));
+    var blade_phase = (this.powered && (typeof this.rpm_scale !== 'undefined')) ? this.rpm_scale * gameplay_frame : 0.8;
+    drawBlade(scale * drone_arm_size.x - 0.05, sin(f * blade_phase));
+    drawBlade(-scale * drone_arm_size.x + 0.05, sin(f * blade_phase));
 
     ctx.rotate(tilt);
     ctx.translate(-p.x, -p.y);
@@ -158,13 +159,22 @@ var Drone = function(loc) {
   this.controlStrength = function(person) {
     // On scale from 0 to 1, depending on how near drone is to person
     person = person || this.person;
+    if (!person) { return 0; }
     return 0.5 + Math.atan(20 - dist(this.p, person.p))/pi;
   }
 
   this.uncontrol = function() {
     if (!this.person) return;
     this.person.color = person_color;
+
+    // The newly released person's willpower has been decreased;
+    // it will be easier to re-control them in the future
     this.person.control_level = 0;
+
+    // Now the person is eager to talk about their experience
+    this.person.addIdea(wnd.ideas.drone);
+    this.person.talkToClosestPerson();
+
     this.person = null;
   }
 
@@ -180,7 +190,7 @@ var Drone = function(loc) {
   this.attemptControl = function() {
     // square the control strength so that it's more limited
     var person = this.getClosestPerson();
-    if (person && probability(squared(this.controlStrength(person)))) {
+    if (person && probability(squared(this.controlStrength()))) {
       person.control_level += person_control_rate * 2; // multiplied by two to counteract the decay
       this.control_signal_target = vec_add(person.p, xy(0, person_size.y));
 

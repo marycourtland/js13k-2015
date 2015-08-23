@@ -73,6 +73,18 @@ function Person() {
     this.switchBehavior('talk');
   };
 
+  this.talkToClosestPerson = function() {
+    this.talkTo(this.getClosestPerson());
+  }
+
+
+  // `crunch `crunch `crunch - this method is basically the same as all the other 'getClosestX' functions
+  // maybe put it in the Actor
+  this.getClosestPerson = function() {
+    // `todo `todo `todo!
+    return wnd.p3;
+  }
+
 
   // Game loop / drawing ========================================
 

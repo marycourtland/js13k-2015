@@ -27,6 +27,10 @@ wnd.onload = function() {
     Camera, Hud
   ];
   environment.generate();
+
+  // wnd.onFrame(200, function() {
+  //   Player.drone.uncontrol();
+  // })
   
   gameplay_on = true;
   reqAnimFrame(go);

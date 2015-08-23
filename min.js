@@ -197,6 +197,10 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   battery_color = "#000"
 
 
+// Ideas
+,   idea_scale = 0.7
+,   idea_color = "#ddd"
+
 // HUD - positions are referenced from origin
 ,   hud_color = '#abb'
 ,   hud_color_dark = '#355'
@@ -321,6 +325,9 @@ var environment = {
     }
   }
 }
+
+// Each idea is global; person objects have refs to the same idea object
+// Ideas are not included in the game loop
 
 function Idea(name, options) {
   options = options || {};
@@ -448,7 +455,8 @@ function Person() {
         // talk to the person
         this.v = xy(0, 0);
         this.talking_dir = abs(d)/d;
-        target_person.addIdea(this.latest_idea);
+        this.talking_idea = this.latest_idea;
+        target_person.addIdea(this.talking_idea);
       }
     }
   }
@@ -468,6 +476,18 @@ function Person() {
     this.current_behavior_params = {person: person};
     this.switchBehavior('talk');
   };
+
+  this.talkToClosestPerson = function() {
+    this.talkTo(this.getClosestPerson());
+  }
+
+
+  // `crunch `crunch `crunch - this method is basically the same as all the other 'getClosestX' functions
+  // maybe put it in the Actor
+  this.getClosestPerson = function() {
+    // `todo `todo `todo!
+    return wnd.p3;
+  }
 
 
   // Game loop / drawing ========================================
@@ -492,12 +512,12 @@ function Person() {
 
   this.draw = function() {
     var dir = this.v.x;
-    debug("PERSON DIR:", dir);
     this.drawRepr(this.p, 1.5, draw.shapeStyle(drone_signal_color, {globalAlpha: this.control_level * Player.drone.controlStrength(this)}), dir);
     this.drawRepr(this.p, 1, draw.shapeStyle(this.color), dir);
 
     if (this.talking_dir !== 0) {
       this.drawSpeechSquiggles(this.talking_dir);
+      this.talking_idea.drawRepr(vec_add(this.p, xy(this.talking_dir * 0.5, 1.2)), idea_scale, draw.shapeStyle(idea_color));
     }
 
   }
@@ -641,7 +661,7 @@ var Drone = function(loc) {
   this.powered = true;
   this.rpm_scale = 0.83;
   this.control_t0 = 0;
-  this.control_signal_target = [];
+  this.control_signal_target = null;
   this.rpm_scale = 0.83; // starting value
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
   this.color = 'black';
@@ -680,7 +700,7 @@ var Drone = function(loc) {
       draw.l(ctx,
         this.p,
         this.control_signal_target,
-        draw.lineStyle(drone_signal_color, {globalAlpha: this.controlStrength()})
+        draw.lineStyle(drone_signal_color, {globalAlpha: this.controlStrength(this.control_signal_target)})
       );
       this.control_signal_target = null; // to be re-set
     }
@@ -725,20 +745,21 @@ var Drone = function(loc) {
     function drawBlade(xpos, xscale) {
       // `crunch
       draw.r(ctx,
-        xy(+ xpos - xscale * blade_x, + height + arm_y*2 + 0.05),
-        xy(+ xpos + xscale * blade_x, + height + arm_y*2 + 0.05 + blade_y*2),
+        xy(xpos - xscale * blade_x, height + arm_y*2 + 0.05),
+        xy(xpos + xscale * blade_x, height + arm_y*2 + 0.05 + blade_y*2),
         fill
       );
       draw.l(ctx,
-        xy(+ xpos, + height + arm_y),
-        xy(+ xpos, + height + arm_y*2 + 0.1),
+        xy(xpos, height + arm_y),
+        xy(xpos, height + arm_y*2 + 0.1),
         strk
       )
     }
 
     var f = 0.8;
-    drawBlade(scale * drone_arm_size.x - 0.05, sin(f * gameplay_frame * this.rpm_scale));
-    drawBlade(-scale * drone_arm_size.x + 0.05, sin(f * gameplay_frame * this.rpm_scale));
+    var blade_phase = (this.powered && (typeof this.rpm_scale !== 'undefined')) ? this.rpm_scale * gameplay_frame : 0.8;
+    drawBlade(scale * drone_arm_size.x - 0.05, sin(f * blade_phase));
+    drawBlade(-scale * drone_arm_size.x + 0.05, sin(f * blade_phase));
 
     ctx.rotate(tilt);
     ctx.translate(-p.x, -p.y);
@@ -792,13 +813,22 @@ var Drone = function(loc) {
   this.controlStrength = function(person) {
     // On scale from 0 to 1, depending on how near drone is to person
     person = person || this.person;
+    if (!person) { return 0; }
     return 0.5 + Math.atan(20 - dist(this.p, person.p))/pi;
   }
 
   this.uncontrol = function() {
     if (!this.person) return;
     this.person.color = person_color;
+
+    // The newly released person's willpower has been decreased;
+    // it will be easier to re-control them in the future
     this.person.control_level = 0;
+
+    // Now the person is eager to talk about their experience
+    this.person.addIdea(wnd.ideas.drone);
+    this.person.talkToClosestPerson();
+
     this.person = null;
   }
 
@@ -814,7 +844,7 @@ var Drone = function(loc) {
   this.attemptControl = function() {
     // square the control strength so that it's more limited
     var person = this.getClosestPerson();
-    if (person && probability(squared(this.controlStrength(person)))) {
+    if (person && probability(squared(this.controlStrength()))) {
       person.control_level += person_control_rate * 2; // multiplied by two to counteract the decay
       this.control_signal_target = vec_add(person.p, xy(0, person_size.y));
 
@@ -1069,7 +1099,7 @@ var Hud = {
 
 window.addEventListener("keydown", function(event) {
   if (event.which in Player.inputControlMap) {
-    //event.preventDefault();
+    event.preventDefault();
     Player.inputControlMap[event.which]();
   }
 });
@@ -1084,7 +1114,7 @@ var gameplay_time = 0;
 var gameplay_fps = 0;
 var avg_fps = 0;
 
-var debug_period = 10000000000000000; // `temp
+var debug_period = 51; // `temp
 
 // The drone code will only interact with these people (for slightly more efficent operation)
 var close_people_per_tick = [];
@@ -1123,7 +1153,11 @@ function go(time) {
   debug("Drone energy:   ", Player.drone.energy);
 
   debug(" "); debug(" ");
-  if (gameplay_frame % debug_period === 0) console.groupEnd(); // `temp
+  if (gameplay_frame % debug_period === 0)  { console.groupEnd(); } // `temp
+  if (gameplay_frame in gameplay_frame_callbacks) {
+    gameplay_frame_callbacks[gameplay_frame]();
+  }
+
   gameplay_frame += 1;
 
 }
@@ -1141,6 +1175,13 @@ function debug() {
   console.debug.apply(console, arguments);
 }
 
+
+// This stuff is sort of `temporary as well
+gameplay_frame_callbacks = {};
+
+wnd.onFrame = function(frame, callback) {
+  gameplay_frame_callbacks[frame] = callback;
+}
 wnd.onload = function() {
 
   // Global game ideas - things NPC people talk about to each other
@@ -1170,6 +1211,10 @@ wnd.onload = function() {
     Camera, Hud
   ];
   environment.generate();
+
+  // wnd.onFrame(200, function() {
+  //   Player.drone.uncontrol();
+  // })
   
   gameplay_on = true;
   reqAnimFrame(go);

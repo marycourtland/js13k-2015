@@ -59,7 +59,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 
 
 // Ideas
-,   idea_scale = 0.8
+,   idea_scale = 0.7
 ,   idea_color = "#ddd"
 
 // HUD - positions are referenced from origin
