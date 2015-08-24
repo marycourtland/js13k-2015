@@ -8,7 +8,7 @@ var gameplay_time = 0;
 var gameplay_fps = 0;
 var avg_fps = 0;
 
-var debug_period = 51; // `temp
+var debug_period = 500; // `temp
 
 // The drone code will only interact with these people (for slightly more efficent operation)
 var close_people_per_tick = [];

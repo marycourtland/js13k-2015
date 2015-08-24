@@ -32,11 +32,31 @@ var wnd = window
     return xy(p1.x + p2.x, p1.y + p2.y)
   }
 , polar2cart = function(p) {
-  return xy(
-    p.r * cos(p.th),
-    p.r * sin(p.th)
-  )
-}
+    return xy(
+      p.r * cos(p.th),
+      p.r * sin(p.th)
+    )
+  }
+, interpolate = function(x, p1, p2) { // Linear
+    if (!p1) { return xy(p2.x, p2.y); }
+    if (!p2) { return xy(p1.x, p1.y); }
+    if (p1.x === p2.x) { return xy(p1.x, p2.y); }
+
+    var f = (x - p1.x) / (p2.x - p1.x);
+    return xy(x, p1.y + f*(p2.y - p1.y));
+  }
+, roundTo = function(x, n) {
+    return Math.round(x / n) * n;
+  }
+, floorTo = function(x, n) {
+    return Math.floor(x / n) * n;
+  }
+, ceilTo = function(x, n) {
+    return Math.ceil(x / n) * n;
+  }
+, bounds = function(x, bounds) {
+    return max(min(x, max.apply(null, bounds)), min.apply(null, bounds));
+  }
 
 // other stuff...
 , resetify = function(item) { if (item.reset) item.reset(); }
@@ -165,7 +185,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 // Dynamics
 // *** Gravity estimate is very sensitive to FPS measurement
 ,   min_dynamics_frame = 5
-,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / min(max(avg_fps * avg_fps, 0), 1000))} // 9.8 m/s^2 translated to units/frame^2
+,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / bounds(avg_fps * avg_fps, [0, 1000])); } // 9.8 m/s^2 translated to units/frame^2
 
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
@@ -248,20 +268,59 @@ var Camera = {
   }
 }
 
+var Platform = function(origin, xres, xrange, ypoints) {
+  this.origin = origin; // this is an xy position
+  this.y0 = origin.y;
+  this.xres = xres;
+  this.xres_offset = xrange[0] % xres;
+  this.xrange = xrange;
+  this.y = ypoints;
+
+  this.yAt = function(x) {
+    return this.pointAt(x).y;
+  }
+
+  this.pointAt = function(x) {
+    x = bounds(x, [this.xrange[0], this.xrange[1]]);
+    var x1 = floorTo(x - this.xres_offset, this.xres) + this.xres_offset;
+    var x2 = ceilTo(x - this.xres_offset, this.xres) + this.xres_offset;
+    return interpolate(x,
+      xy(x1, this.y[x1]),
+      xy(x2, this.y[x2])
+    );
+  };
+
+  this.getPolygon = function(thickness) {
+    var pts = [];
+    pts.push([this.xrange[0], this.y0 - thickness]);
+    for (var x = this.xrange[0]; x <= this.xrange[1]; x += this.xres) {
+      pts.push([x, this.y[x]]);
+    }
+    pts.push([this.xrange[1], this.y0 - thickness]);
+    return pts;
+  };
+
+  this.pts = this.getPolygon(6);
+
+  this.drawRepr = function(style) {
+    draw.p(ctx, this.pts, style);
+  }
+};
+
+// Make a simple two-point platform
+function makePlatform(origin, x_extent) {
+  var y = {};
+  y[origin.x] = origin.y;
+  y[origin.x + x_extent] = origin.y;
+  return new Platform(origin, x_extent, [origin.x, origin.x + x_extent], y);
+}
 // ENVIRONMENT =======================================================
 var environment = {
-  xrange: [-100, 1000],
-  xres: 0.5,
+  ground: new Platform(xy(-100, 3), 0.5, [-100, 1000], {}),
 
   // Height
-  y0: 3,
-  y: {},
   pts: [],
   buildings: [], // Buildings represented by [x, width, height]
-
-  yAt: function(x) {
-    return this.y + (x in dy ? dy[x] : 0);
-  },
 
 
   // Game loop
@@ -276,12 +335,14 @@ var environment = {
     draw.r(ctx, origin, xy(origin.x + game_size.x, origin.y + game_size.y), draw.shapeStyle(grd));
 
     // Draw buildings (decorative only for now)
-    // (subtract 0.5 so that there's no gap betw ground and building. `temp)
-    y0 = this.y0;
+    // (subtract 0.5 so that there's no gap betw ground and building. `temp)=
     this.buildings.forEach(function(building) {
+      var x1 = building.x - building.w/2;
+      var x2 = building.x + building.w/2;
+      var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
       draw.r(ctx,
-        xy(building.x - building.w/2, y0 - 0.5),
-        xy(building.x + building.w/2, y0 + building.h),
+        xy(x1, y0 - 0.5),
+        xy(x2, y0 + building.h),
         draw.shapeStyle(building_color)
       )
     })
@@ -294,16 +355,17 @@ var environment = {
     // Ground
     var fill = draw.shapeStyle(environment_color);
     draw.p(ctx, this.pts, fill);
-    // draw.r(ctx, xy(-100,0), xy(100, 3), fill);
   },
 
   generate: function() {
-    this.pts.push([this.xrange[0], 0]);
-    for (var x = this.xrange[0]; x < this.xrange[1]; x += this.xres) {
-      this.y[x] = this.y0 + rnds(0.2);
-      this.pts.push([x, this.y[x]]);
+    this.pts.push([this.ground.xrange[0], 0]);
+    var terrain = this.generateTerrainFunction();
+    for (var x = this.ground.xrange[0]; x < this.ground.xrange[1]; x += this.ground.xres) {
+
+      this.ground.y[x] = this.ground.y0 + terrain(x);
+      this.pts.push([x, this.ground.y[x]]);
     }
-    this.pts.push([this.xrange[1],0]);
+    this.pts.push([this.ground.xrange[1],0]);
 
     for (var i = 0; i < num_building_clumps; i++) {
       console.log('generate #' + i);
@@ -312,7 +374,7 @@ var environment = {
   },
 
   generateBuildingClump: function() {
-    var x0 = rnds.apply(wnd, this.xrange);
+    var x0 = rnds.apply(wnd, this.ground.xrange);
     var n = num_buildings_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
@@ -323,6 +385,25 @@ var environment = {
       })
 
     }
+  },
+
+  generateTerrainFunction: function() {
+    var frequencies = [];
+    for (var i = 0; i < 10; i++) {
+      frequencies.push(1/rnds(1, 5));
+    }
+
+    // some lower-frequency rolling
+    frequencies.push(1/rnds(10, 12));
+
+    return function(x) {
+      var y = 0;
+      frequencies.forEach(function(f) {
+        y += 1/(f * 100) * sin(f*x + rnds(0, 0.5));
+      })
+      return y;
+    }
+
   }
 }
 
@@ -348,6 +429,8 @@ function Actor(p) {
   this.p = p || xy(0, 0);
   this.v = xy(0, 0);
   this.gravity = false;
+  this.platform = environment.ground;
+  this.stay_on_platform = false;
 
   this.tick = function() {
     this.p.x += this.v.x;
@@ -358,12 +441,18 @@ function Actor(p) {
     }
 
     // Ground collision
-    if (this.p.y < environment.y0) {
-      this.p.y = environment.y0;
+    var y0 = this.platform.yAt(this.p.x);
+    if (this.p.y < y0) {
+      this.p.y = y0;
 
       // Don't do this every frame so that actor doesn't get stuck
       this.v.y = max(this.v.y, 0);
-      this.color = 'red';
+      // this.color = 'red';
+
+      if (this.stay_on_platform) {
+        // Set y coordinate to be the platform's y coordinate
+        this.p =this.platform.pointAt(this.p.x);
+      }
     }
 
     this.handleBehavior();
@@ -405,13 +494,14 @@ function Actor(p) {
 // PEOPLE ============================================================
 
 function Person() {
-  this.p = xy(0, environment.y0);
+  this.p = xy(0, 0);
   this.color = person_color;
   this.drone_distance = null; // only relevant when person is within the interaction window
   this.inventory_item = null; // each person can only hold 1 thing at a time
   this.resistance = rnd();
   this.control_level = 0;     // the person is fully controlled when this exceeds the resistance measure
   this.talking_dir = 0;
+  this.stay_on_platform = true;
 
   this.init = function(properties) {
     for (var prop in properties) {
@@ -597,7 +687,8 @@ function Person() {
 
   this.drop = function() {
     if (!this.inventory_item) return;
-    this.inventory_item.p.y = environment.y0;
+    this.inventory_item.p = this.platform.pointAt(this.inventory_item.p.x);
+    this.inventory_item.platform = this.platform;
     this.inventory_item.container = null;
     this.inventory_item = null;
   }
@@ -674,8 +765,8 @@ var Drone = function(loc) {
 
 
   this.tick = function() {
-    this.rpm_scale = max(min(this.rpm_scale, 1), 0);
-    this.rpm_diff = max(min(this.rpm_diff, 1), -1);
+    this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
+    this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
 
     // acceleration given by copter blades
     this.v = vec_add(this.v, this.getLiftAccel());
@@ -811,6 +902,7 @@ var Drone = function(loc) {
   // Controlling people ========================================================
 
   this.controlStrength = function(person) {
+    return 1;
     // On scale from 0 to 1, depending on how near drone is to person
     person = person || this.person;
     if (!person) { return 0; }
@@ -928,14 +1020,24 @@ lightning = {
   },
   draw: function() {
     if (this.timeleft < 0) { return; }
-    draw.p(ctx, this.pts, draw.lineStyle('#fff'))
+    var glowdata = [
+      // color, linewidth, alpha
+      ['#aaf', 0.5, 0.05],
+      ['#aaf', 0.3, 0.05],
+      ['#aaf', 0.1, 0.5],
+      ['#ccf', 0.05, 1]
+    ];
+    var pts = this.pts;
+    glowdata.forEach(function(data) {
+      draw.p(ctx, pts, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2]}))
+    })
   },
   redraw: function() {
     // Pick an origin point in the sky and random walk downwards
     var x = rnds(game_size.x + origin.x), y = game_size.y;
     this.pts = [[x, y]];
     var p = 0;
-    while (y > environment.y0) {
+    while (y > environment.ground.yAt(x)) {
       x += rnds(-0.4, 0.4);
       y -= rnds(0.5, 1);
       this.pts.push([x, y]);
@@ -952,6 +1054,7 @@ lightning = {
 
 function Item(loc) {
   this.p = loc;
+  this.platform = environment.ground;
   this.container = null;
   this.person_distance = null;
 }
@@ -966,6 +1069,11 @@ Item.prototype.tick = function() {
       close_items_per_tick.push(this);
       this.person_distance = dist(this.p, Player.drone.person.p);
     }      
+  }
+
+  if (!this.container) {
+    // keep it on the ground
+    this.p =this.platform.pointAt(this.p.x);
   }
   
 }
@@ -1114,7 +1222,7 @@ var gameplay_time = 0;
 var gameplay_fps = 0;
 var avg_fps = 0;
 
-var debug_period = 51; // `temp
+var debug_period = 500; // `temp
 
 // The drone code will only interact with these people (for slightly more efficent operation)
 var close_people_per_tick = [];
@@ -1193,20 +1301,29 @@ wnd.onload = function() {
     })
   }
 
+  // A sample platform
+  wnd.platform = makePlatform(xy(15, 6), 10);
+  wnd.platform.draw = function() {
+    this.drawRepr(draw.shapeStyle('#2E272E'));
+  }
+
   // `temp sample people/items
-  wnd.p1 = (new Person()).init({p: xy(14, 3), v: xy(0.05, 0)});
+  wnd.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0), platform: wnd.platform});
   wnd.p2 = (new Person()).init({p: xy(18, 3)});
   wnd.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
 
-  wnd.battery1 = new Battery(xy(25, 3));
+  wnd.battery1 = new Battery(xy(23, 3));
   wnd.battery2 = new Battery(xy(28, 3));
 
-  Player.drone.controlFull((new Person()).init({p: xy(Player.drone.p.x  + 3, environment.y0)}));
+  wnd.battery1.platform = wnd.platform;
+
+  Player.drone.controlFull((new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)}));
 
   wnd.loop_objects = [
     battery1, battery2,
     Player.drone, Player.drone.person, Player,
     p1, p2, p3,
+    wnd.platform,
     environment, lightning,
     Camera, Hud
   ];

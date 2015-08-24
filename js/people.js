@@ -1,13 +1,14 @@
 // PEOPLE ============================================================
 
 function Person() {
-  this.p = xy(0, environment.y0);
+  this.p = xy(0, 0);
   this.color = person_color;
   this.drone_distance = null; // only relevant when person is within the interaction window
   this.inventory_item = null; // each person can only hold 1 thing at a time
   this.resistance = rnd();
   this.control_level = 0;     // the person is fully controlled when this exceeds the resistance measure
   this.talking_dir = 0;
+  this.stay_on_platform = true;
 
   this.init = function(properties) {
     for (var prop in properties) {
@@ -193,7 +194,8 @@ function Person() {
 
   this.drop = function() {
     if (!this.inventory_item) return;
-    this.inventory_item.p.y = environment.y0;
+    this.inventory_item.p = this.platform.pointAt(this.inventory_item.p.x);
+    this.inventory_item.platform = this.platform;
     this.inventory_item.container = null;
     this.inventory_item = null;
   }

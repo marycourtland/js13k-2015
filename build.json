@@ -5,6 +5,7 @@
     "js/settings.js",
     "js/setup.js",
     "js/camera.js",
+    "js/platforms.js",
     "js/environment.js",
     "js/ideas.js",
     "js/actors.js",

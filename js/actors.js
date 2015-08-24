@@ -6,6 +6,8 @@ function Actor(p) {
   this.p = p || xy(0, 0);
   this.v = xy(0, 0);
   this.gravity = false;
+  this.platform = environment.ground;
+  this.stay_on_platform = false;
 
   this.tick = function() {
     this.p.x += this.v.x;
@@ -16,12 +18,18 @@ function Actor(p) {
     }
 
     // Ground collision
-    if (this.p.y < environment.y0) {
-      this.p.y = environment.y0;
+    var y0 = this.platform.yAt(this.p.x);
+    if (this.p.y < y0) {
+      this.p.y = y0;
 
       // Don't do this every frame so that actor doesn't get stuck
       this.v.y = max(this.v.y, 0);
-      this.color = 'red';
+      // this.color = 'red';
+
+      if (this.stay_on_platform) {
+        // Set y coordinate to be the platform's y coordinate
+        this.p =this.platform.pointAt(this.p.x);
+      }
     }
 
     this.handleBehavior();

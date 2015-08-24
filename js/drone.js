@@ -20,8 +20,8 @@ var Drone = function(loc) {
 
 
   this.tick = function() {
-    this.rpm_scale = max(min(this.rpm_scale, 1), 0);
-    this.rpm_diff = max(min(this.rpm_diff, 1), -1);
+    this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
+    this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
 
     // acceleration given by copter blades
     this.v = vec_add(this.v, this.getLiftAccel());
@@ -157,6 +157,7 @@ var Drone = function(loc) {
   // Controlling people ========================================================
 
   this.controlStrength = function(person) {
+    return 1;
     // On scale from 0 to 1, depending on how near drone is to person
     person = person || this.person;
     if (!person) { return 0; }
