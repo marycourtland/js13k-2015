@@ -1,17 +1,10 @@
 // ENVIRONMENT =======================================================
 var environment = {
-  xrange: [-100, 1000],
-  xres: 0.5,
+  ground: new Platform(xy(-100, 3), 0.5, [-100, 1000], {}),
 
   // Height
-  y0: 3,
-  y: {},
   pts: [],
   buildings: [], // Buildings represented by [x, width, height]
-
-  yAt: function(x) {
-    return this.y + (x in dy ? dy[x] : 0);
-  },
 
 
   // Game loop
@@ -26,12 +19,14 @@ var environment = {
     draw.r(ctx, origin, xy(origin.x + game_size.x, origin.y + game_size.y), draw.shapeStyle(grd));
 
     // Draw buildings (decorative only for now)
-    // (subtract 0.5 so that there's no gap betw ground and building. `temp)
-    y0 = this.y0;
+    // (subtract 0.5 so that there's no gap betw ground and building. `temp)=
     this.buildings.forEach(function(building) {
+      var x1 = building.x - building.w/2;
+      var x2 = building.x + building.w/2;
+      var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
       draw.r(ctx,
-        xy(building.x - building.w/2, y0 - 0.5),
-        xy(building.x + building.w/2, y0 + building.h),
+        xy(x1, y0 - 0.5),
+        xy(x2, y0 + building.h),
         draw.shapeStyle(building_color)
       )
     })
@@ -44,16 +39,17 @@ var environment = {
     // Ground
     var fill = draw.shapeStyle(environment_color);
     draw.p(ctx, this.pts, fill);
-    // draw.r(ctx, xy(-100,0), xy(100, 3), fill);
   },
 
   generate: function() {
-    this.pts.push([this.xrange[0], 0]);
-    for (var x = this.xrange[0]; x < this.xrange[1]; x += this.xres) {
-      this.y[x] = this.y0 + rnds(0.2);
-      this.pts.push([x, this.y[x]]);
+    this.pts.push([this.ground.xrange[0], 0]);
+    var terrain = this.generateTerrainFunction();
+    for (var x = this.ground.xrange[0]; x < this.ground.xrange[1]; x += this.ground.xres) {
+
+      this.ground.y[x] = this.ground.y0 + terrain(x);
+      this.pts.push([x, this.ground.y[x]]);
     }
-    this.pts.push([this.xrange[1],0]);
+    this.pts.push([this.ground.xrange[1],0]);
 
     for (var i = 0; i < num_building_clumps; i++) {
       console.log('generate #' + i);
@@ -62,7 +58,7 @@ var environment = {
   },
 
   generateBuildingClump: function() {
-    var x0 = rnds.apply(wnd, this.xrange);
+    var x0 = rnds.apply(wnd, this.ground.xrange);
     var n = num_buildings_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
@@ -73,5 +69,24 @@ var environment = {
       })
 
     }
+  },
+
+  generateTerrainFunction: function() {
+    var frequencies = [];
+    for (var i = 0; i < 10; i++) {
+      frequencies.push(1/rnds(1, 5));
+    }
+
+    // some lower-frequency rolling
+    frequencies.push(1/rnds(10, 12));
+
+    return function(x) {
+      var y = 0;
+      frequencies.forEach(function(f) {
+        y += 1/(f * 100) * sin(f*x + rnds(0, 0.5));
+      })
+      return y;
+    }
+
   }
 }

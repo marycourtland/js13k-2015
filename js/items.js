@@ -4,6 +4,7 @@
 
 function Item(loc) {
   this.p = loc;
+  this.platform = environment.ground;
   this.container = null;
   this.person_distance = null;
 }
@@ -18,6 +19,11 @@ Item.prototype.tick = function() {
       close_items_per_tick.push(this);
       this.person_distance = dist(this.p, Player.drone.person.p);
     }      
+  }
+
+  if (!this.container) {
+    // keep it on the ground
+    this.p =this.platform.pointAt(this.p.x);
   }
   
 }

@@ -2,7 +2,7 @@
 
 // Game and camera settings
 var game_scale = xy(20, 20) // pixels -> game units conversion
-,   game_size = xy(wnd.innerWidth/game_scale.x, 30)
+,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 30)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
@@ -26,7 +26,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 // Dynamics
 // *** Gravity estimate is very sensitive to FPS measurement
 ,   min_dynamics_frame = 5
-,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / min(max(avg_fps * avg_fps, 0), 1000))} // 9.8 m/s^2 translated to units/frame^2
+,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / bounds(avg_fps * avg_fps, [0, 1000])); } // 9.8 m/s^2 translated to units/frame^2
 
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
@@ -39,6 +39,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   person_control_rate = 0.05 // rate at which control level increases or drops
 ,   min_person_resistance = 2 * person_control_rate
 ,   person_interaction_window = 8
+,   interaction_distance = 1
 
 
 // Drone
@@ -50,12 +51,16 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   drone_drain_rate = 0.00005 // energy per frame
 ,   drone_low_energy = 0.1
 ,   drone_high_energy = 0.9
+,   drone_max_sideways_accel = 0.01
 
 // Items
 ,   battery_size = {x: 0.5, y: 0.3}
 ,   battery_color = "#000"
-,   interaction_distance = 1.2
 
+
+// Ideas
+,   idea_scale = 0.7
+,   idea_color = "#ddd"
 
 // HUD - positions are referenced from origin
 ,   hud_color = '#abb'

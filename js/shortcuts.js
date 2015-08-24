@@ -32,11 +32,31 @@ var wnd = window
     return xy(p1.x + p2.x, p1.y + p2.y)
   }
 , polar2cart = function(p) {
-  return xy(
-    p.r * cos(p.th),
-    p.r * sin(p.th)
-  )
-}
+    return xy(
+      p.r * cos(p.th),
+      p.r * sin(p.th)
+    )
+  }
+, interpolate = function(x, p1, p2) { // Linear
+    if (!p1) { return xy(p2.x, p2.y); }
+    if (!p2) { return xy(p1.x, p1.y); }
+    if (p1.x === p2.x) { return xy(p1.x, p2.y); }
+
+    var f = (x - p1.x) / (p2.x - p1.x);
+    return xy(x, p1.y + f*(p2.y - p1.y));
+  }
+, roundTo = function(x, n) {
+    return Math.round(x / n) * n;
+  }
+, floorTo = function(x, n) {
+    return Math.floor(x / n) * n;
+  }
+, ceilTo = function(x, n) {
+    return Math.ceil(x / n) * n;
+  }
+, bounds = function(x, bounds) {
+    return max(min(x, max.apply(null, bounds)), min.apply(null, bounds));
+  }
 
 // other stuff...
 , resetify = function(item) { if (item.reset) item.reset(); }

@@ -1,0 +1,23 @@
+{
+  "files": [
+    "js/shortcuts.js",
+    "js/drawing.js",
+    "js/settings.js",
+    "js/setup.js",
+    "js/camera.js",
+    "js/platforms.js",
+    "js/environment.js",
+    "js/ideas.js",
+    "js/actors.js",
+    "js/people.js",
+    "js/drone.js",
+    "js/player.js",
+    "js/lightning.js",
+    "js/items.js",
+    "js/batteries.js",
+    "js/hud.js",
+    "js/events.js",
+    "js/gameloop.js",
+    "js/run.js"
+  ]
+}

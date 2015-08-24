@@ -8,7 +8,7 @@ var gameplay_time = 0;
 var gameplay_fps = 0;
 var avg_fps = 0;
 
-var debug_period = 10000000000000000; // `temp
+var debug_period = 500; // `temp
 
 // The drone code will only interact with these people (for slightly more efficent operation)
 var close_people_per_tick = [];
@@ -47,7 +47,11 @@ function go(time) {
   debug("Drone energy:   ", Player.drone.energy);
 
   debug(" "); debug(" ");
-  if (gameplay_frame % debug_period === 0) console.groupEnd(); // `temp
+  if (gameplay_frame % debug_period === 0)  { console.groupEnd(); } // `temp
+  if (gameplay_frame in gameplay_frame_callbacks) {
+    gameplay_frame_callbacks[gameplay_frame]();
+  }
+
   gameplay_frame += 1;
 
 }
@@ -63,4 +67,12 @@ function loopDestroy(obj) {
 function debug() {
   if (gameplay_frame % debug_period !== 0) { return; }
   console.debug.apply(console, arguments);
+}
+
+
+// This stuff is sort of `temporary as well
+gameplay_frame_callbacks = {};
+
+wnd.onFrame = function(frame, callback) {
+  gameplay_frame_callbacks[frame] = callback;
 }

@@ -11,8 +11,8 @@ var Player = {
   inputControlMap: { // `crunch `crunch `crunch
     // map event.which => function
     // ADSW directions for drone
-    65: function() { Player.drone.p.x -= 1; },
-    68: function() { Player.drone.p.x += 1; },
+    65: function() { Player.drone.tiltLeft(); },
+    68: function() { Player.drone.tiltRight(); },
     83: function() { Player.drone.powerDown(); },
     87: function() { Player.drone.powerUp(); },
     37: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x -= 1; },
