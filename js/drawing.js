@@ -85,7 +85,7 @@ var draw = {
     this.do(ctx, params, function() {
       ctx.moveTo(pts[0].x, pts[0].y);
       pts.forEach(function(p) {
-        ctx.lineTo(p[0], p[1]);
+        ctx.lineTo(p.x, p.y);
       })
     })
   }

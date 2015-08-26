@@ -4,7 +4,9 @@ var wnd = window
 , doc = document
 , $ = function () { return doc.querySelector.apply(doc, arguments); }
 , reqAnimFrame = wnd.requestAnimationFrame || wnd.mozRequestAnimationFrame
-
+, notify = function(msg) {
+    $('#game-message').textContent = msg;
+  }
 
 // Math ==============================================================
 , pi = Math.PI
@@ -63,5 +65,6 @@ var wnd = window
 , tickity = function(item) { if (item.tick) item.tick(); }
 , drawity = function(item) { if (item.draw) item.draw(); }
 
- 
+, null_function = function() {}
+
 ;

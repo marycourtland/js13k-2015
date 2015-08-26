@@ -27,12 +27,12 @@ lightning = {
   redraw: function() {
     // Pick an origin point in the sky and random walk downwards
     var x = rnds(game_size.x + origin.x), y = game_size.y;
-    this.pts = [[x, y]];
+    this.pts = [xy(x, y)];
     var p = 0;
     while (y > environment.ground.yAt(x)) {
       x += rnds(-0.4, 0.4);
       y -= rnds(0.5, 1);
-      this.pts.push([x, y]);
+      this.pts.push(xy(x, y));
     }
   },
   strike: function() {

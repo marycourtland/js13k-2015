@@ -9,6 +9,7 @@ function Person() {
   this.control_level = 0;     // the person is fully controlled when this exceeds the resistance measure
   this.talking_dir = 0;
   this.stay_on_platform = true;
+  this.role = roles.normal;
 
   this.init = function(properties) {
     for (var prop in properties) {
@@ -86,6 +87,13 @@ function Person() {
     return wnd.p3;
   }
 
+  // Roles ======================================================
+
+  this.byRole = function(method) {
+    if (!method in this.role) { console.warn('Uh oh, person role does not have method:', method); return; }
+    this.role[method].apply(this);
+  }
+
 
   // Game loop / drawing ========================================
 
@@ -117,6 +125,7 @@ function Person() {
       this.talking_idea.drawRepr(vec_add(this.p, xy(this.talking_dir * 0.5, 1.2)), idea_scale, draw.shapeStyle(idea_color));
     }
 
+    this.byRole('draw');
   }
 
   this.drawRepr = function(p, scale, fill, dir) {
@@ -155,6 +164,18 @@ function Person() {
       radius,
       fill
     );
+  }
+
+  this.drawSash = function(color) {
+    var ps = person_size;
+    draw.p(ctx, [
+        vec_add(this.p, xy(-ps.x/2, 0)),
+        vec_add(this.p, xy(-ps.x/2, ps.x/2)),
+        vec_add(this.p, xy(ps.x/2, ps.y-ps.x/4)),
+        vec_add(this.p, xy(ps.x/2, ps.y-3*ps.x/4))
+      ],
+      draw.shapeStyle(color)
+    )
   }
 
   this.drawSpeechSquiggles = function(dir) {

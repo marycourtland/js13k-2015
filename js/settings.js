@@ -62,14 +62,14 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   idea_scale = 0.7
 ,   idea_color = "#ddd"
 
-// HUD - positions are referenced from origin
+// HUD - positions are referenced from the upper right corner of game
 ,   hud_color = '#abb'
 ,   hud_color_dark = '#355'
 ,   hud_red = '#811'
 ,   hud_green = '#161'
 ,   hud_dial_radius = 1
-,   energy_meter_position = xy(2, 28.5)
+,   energy_meter_position = xy(12, 28.5)
 ,   energy_meter_size = xy(4, 0.5)
-,   rpm_meter_position = xy(10, 28.5)
+,   rpm_meter_position = xy(3, 28.5)
 
 ;
