@@ -10,6 +10,7 @@
     "js/ideas.js",
     "js/actors.js",
     "js/people.js",
+    "js/roles.js",
     "js/drone.js",
     "js/player.js",
     "js/lightning.js",

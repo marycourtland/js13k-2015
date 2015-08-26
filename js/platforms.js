@@ -22,11 +22,11 @@ var Platform = function(origin, xres, xrange, ypoints) {
 
   this.getPolygon = function(thickness) {
     var pts = [];
-    pts.push([this.xrange[0], this.y0 - thickness]);
+    pts.push(xy(this.xrange[0], this.y0 - thickness));
     for (var x = this.xrange[0]; x <= this.xrange[1]; x += this.xres) {
-      pts.push([x, this.y[x]]);
+      pts.push(xy(x, this.y[x]));
     }
-    pts.push([this.xrange[1], this.y0 - thickness]);
+    pts.push(xy(this.xrange[1], this.y0 - thickness));
     return pts;
   };
 

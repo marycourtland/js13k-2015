@@ -4,7 +4,9 @@ var wnd = window
 , doc = document
 , $ = function () { return doc.querySelector.apply(doc, arguments); }
 , reqAnimFrame = wnd.requestAnimationFrame || wnd.mozRequestAnimationFrame
-
+, notify = function(msg) {
+    $('#game-message').textContent = msg;
+  }
 
 // Math ==============================================================
 , pi = Math.PI
@@ -63,7 +65,8 @@ var wnd = window
 , tickity = function(item) { if (item.tick) item.tick(); }
 , drawity = function(item) { if (item.draw) item.draw(); }
 
- 
+, null_function = function() {}
+
 ;
 // All 2d points should be input as {x:xval, y:yval}
 
@@ -152,7 +155,7 @@ var draw = {
     this.do(ctx, params, function() {
       ctx.moveTo(pts[0].x, pts[0].y);
       pts.forEach(function(p) {
-        ctx.lineTo(p[0], p[1]);
+        ctx.lineTo(p.x, p.y);
       })
     })
   }
@@ -221,15 +224,15 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   idea_scale = 0.7
 ,   idea_color = "#ddd"
 
-// HUD - positions are referenced from origin
+// HUD - positions are referenced from the upper right corner of game
 ,   hud_color = '#abb'
 ,   hud_color_dark = '#355'
 ,   hud_red = '#811'
 ,   hud_green = '#161'
 ,   hud_dial_radius = 1
-,   energy_meter_position = xy(2, 28.5)
+,   energy_meter_position = xy(12, 28.5)
 ,   energy_meter_size = xy(4, 0.5)
-,   rpm_meter_position = xy(10, 28.5)
+,   rpm_meter_position = xy(3, 28.5)
 
 ;
 // SETUP =============================================================
@@ -292,11 +295,11 @@ var Platform = function(origin, xres, xrange, ypoints) {
 
   this.getPolygon = function(thickness) {
     var pts = [];
-    pts.push([this.xrange[0], this.y0 - thickness]);
+    pts.push(xy(this.xrange[0], this.y0 - thickness));
     for (var x = this.xrange[0]; x <= this.xrange[1]; x += this.xres) {
-      pts.push([x, this.y[x]]);
+      pts.push(xy(x, this.y[x]));
     }
-    pts.push([this.xrange[1], this.y0 - thickness]);
+    pts.push(xy(this.xrange[1], this.y0 - thickness));
     return pts;
   };
 
@@ -358,14 +361,14 @@ var environment = {
   },
 
   generate: function() {
-    this.pts.push([this.ground.xrange[0], 0]);
+    this.pts.push(xy(this.ground.xrange[0], 0));
     var terrain = this.generateTerrainFunction();
     for (var x = this.ground.xrange[0]; x < this.ground.xrange[1]; x += this.ground.xres) {
 
       this.ground.y[x] = this.ground.y0 + terrain(x);
-      this.pts.push([x, this.ground.y[x]]);
+      this.pts.push(xy(x, this.ground.y[x]));
     }
-    this.pts.push([this.ground.xrange[1],0]);
+    this.pts.push(xy(this.ground.xrange[1],0));
 
     for (var i = 0; i < num_building_clumps; i++) {
       console.log('generate #' + i);
@@ -412,8 +415,6 @@ var environment = {
 
 function Idea(name, options) {
   options = options || {};
-  var null_function = function() {};
-
   this.name = name;
 
   // This drawing method will be drawn right above the people talking about it
@@ -502,6 +503,7 @@ function Person() {
   this.control_level = 0;     // the person is fully controlled when this exceeds the resistance measure
   this.talking_dir = 0;
   this.stay_on_platform = true;
+  this.role = roles.normal;
 
   this.init = function(properties) {
     for (var prop in properties) {
@@ -579,6 +581,13 @@ function Person() {
     return wnd.p3;
   }
 
+  // Roles ======================================================
+
+  this.byRole = function(method) {
+    if (!method in this.role) { console.warn('Uh oh, person role does not have method:', method); return; }
+    this.role[method].apply(this);
+  }
+
 
   // Game loop / drawing ========================================
 
@@ -610,6 +619,7 @@ function Person() {
       this.talking_idea.drawRepr(vec_add(this.p, xy(this.talking_dir * 0.5, 1.2)), idea_scale, draw.shapeStyle(idea_color));
     }
 
+    this.byRole('draw');
   }
 
   this.drawRepr = function(p, scale, fill, dir) {
@@ -648,6 +658,18 @@ function Person() {
       radius,
       fill
     );
+  }
+
+  this.drawSash = function(color) {
+    var ps = person_size;
+    draw.p(ctx, [
+        vec_add(this.p, xy(-ps.x/2, 0)),
+        vec_add(this.p, xy(-ps.x/2, ps.x/2)),
+        vec_add(this.p, xy(ps.x/2, ps.y-ps.x/4)),
+        vec_add(this.p, xy(ps.x/2, ps.y-3*ps.x/4))
+      ],
+      draw.shapeStyle(color)
+    )
   }
 
   this.drawSpeechSquiggles = function(dir) {
@@ -743,6 +765,36 @@ function Person() {
 }
 
 Person.prototype = new Actor();
+// An npc person's role influences various things
+// and they all are displayed through some visual 
+// like a hat, sash, or whatever
+//
+// Functions (all called with the person as `this`)
+//    draw: called right after the person is drawn
+//    onControl: an event triggered when the npc is controlled (by the player drone)
+
+function Role(options) {
+  this.draw = options.draw || null_function;
+  this.onControl = options.onControl || null_function;
+};
+
+var roles = {
+  normal: new Role({
+    draw: function() {
+      this.drawSash('green');
+    }
+  }),
+
+  game_target: new Role({
+    draw: function() {
+      this.drawSash('red');
+    },
+
+    onControl: function() {
+      notify('You have won. Congratulations.');
+    }
+  })
+}
 // THE DRONE =========================================================
 
 var Drone = function(loc) {
@@ -859,7 +911,7 @@ var Drone = function(loc) {
   this.die = function() {
       this.powered = false;
       this.rpm_scale = 0;
-
+      notify('Your battery is drained. Refresh to play again.')
   }
   
   // Fake aerodynamics! ========================================================
@@ -931,6 +983,8 @@ var Drone = function(loc) {
     this.person.control_level = 1;
     // Once a person is fully controlled, their resistance drops very low
     this.person.resistance = min_person_resistance;
+
+    this.person.byRole('onControl');
   }
 
   this.attemptControl = function() {
@@ -1035,12 +1089,12 @@ lightning = {
   redraw: function() {
     // Pick an origin point in the sky and random walk downwards
     var x = rnds(game_size.x + origin.x), y = game_size.y;
-    this.pts = [[x, y]];
+    this.pts = [xy(x, y)];
     var p = 0;
     while (y > environment.ground.yAt(x)) {
       x += rnds(-0.4, 0.4);
       y -= rnds(0.5, 1);
-      this.pts.push([x, y]);
+      this.pts.push(xy(x, y));
     }
   },
   strike: function() {
@@ -1141,7 +1195,7 @@ var Hud = {
 
   displays: {
     energy: function() {
-      var p = vec_add(energy_meter_position, origin);
+      var p = xy(game_size.x - energy_meter_position.x, energy_meter_position.y);
       (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color));
 
       p = vec_add(p, xy(1, 0.1));
@@ -1165,7 +1219,7 @@ var Hud = {
     rpm: function() {
       this.drawDial(
         hud_dial_radius,
-        vec_add(origin, rpm_meter_position),
+        xy(game_size.x - rpm_meter_position.x, rpm_meter_position.y),
         Player.drone.rpm_scale,
         [0.82, 0.85]
       );
@@ -1311,6 +1365,10 @@ wnd.onload = function() {
   wnd.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0), platform: wnd.platform});
   wnd.p2 = (new Person()).init({p: xy(18, 3)});
   wnd.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
+  
+
+  // Game target: if you overpower this one, you win
+  wnd.target = (new Person()).init({p: xy(37, 3), v: xy(-0.05, 0), role: roles.game_target});
 
   wnd.battery1 = new Battery(xy(23, 3));
   wnd.battery2 = new Battery(xy(28, 3));
@@ -1322,7 +1380,7 @@ wnd.onload = function() {
   wnd.loop_objects = [
     battery1, battery2,
     Player.drone, Player.drone.person, Player,
-    p1, p2, p3,
+    p1, p2, p3, target,
     wnd.platform,
     environment, lightning,
     Camera, Hud

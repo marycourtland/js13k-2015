@@ -42,14 +42,14 @@ var environment = {
   },
 
   generate: function() {
-    this.pts.push([this.ground.xrange[0], 0]);
+    this.pts.push(xy(this.ground.xrange[0], 0));
     var terrain = this.generateTerrainFunction();
     for (var x = this.ground.xrange[0]; x < this.ground.xrange[1]; x += this.ground.xres) {
 
       this.ground.y[x] = this.ground.y0 + terrain(x);
-      this.pts.push([x, this.ground.y[x]]);
+      this.pts.push(xy(x, this.ground.y[x]));
     }
-    this.pts.push([this.ground.xrange[1],0]);
+    this.pts.push(xy(this.ground.xrange[1],0));
 
     for (var i = 0; i < num_building_clumps; i++) {
       console.log('generate #' + i);

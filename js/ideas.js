@@ -3,8 +3,6 @@
 
 function Idea(name, options) {
   options = options || {};
-  var null_function = function() {};
-
   this.name = name;
 
   // This drawing method will be drawn right above the people talking about it

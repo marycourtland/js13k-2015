@@ -114,7 +114,7 @@ var Drone = function(loc) {
   this.die = function() {
       this.powered = false;
       this.rpm_scale = 0;
-
+      notify('Your battery is drained. Refresh to play again.')
   }
   
   // Fake aerodynamics! ========================================================
@@ -186,6 +186,8 @@ var Drone = function(loc) {
     this.person.control_level = 1;
     // Once a person is fully controlled, their resistance drops very low
     this.person.resistance = min_person_resistance;
+
+    this.person.byRole('onControl');
   }
 
   this.attemptControl = function() {
