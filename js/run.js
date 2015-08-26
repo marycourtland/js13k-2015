@@ -32,10 +32,10 @@ wnd.onload = function() {
   Player.drone.controlFull((new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)}));
 
   wnd.loop_objects = [
+    wnd.platform,
     battery1, battery2,
     Player.drone, Player.drone.person, Player,
     p1, p2, p3, target,
-    wnd.platform,
     environment, lightning,
     Camera, Hud
   ];

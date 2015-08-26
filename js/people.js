@@ -178,6 +178,21 @@ function Person() {
     )
   }
 
+  this.drawTopHat = function(color) {
+    var ps = person_size;
+    var y = ps.y + 2*ps.x/3;
+    draw.r(ctx,
+      vec_add(this.p, xy(-ps.x/4, y)),
+      vec_add(this.p, xy(ps.x/4, y + ps.x)),
+      draw.shapeStyle(color)
+    );
+    draw.r(ctx,
+      vec_add(this.p, xy(-ps.x/2, y)),
+      vec_add(this.p, xy(ps.x/2, y + ps.x/3)),
+      draw.shapeStyle(color)
+    );
+  }
+
   this.drawSpeechSquiggles = function(dir) {
     // `crunch
     var x = this.p.x + dir * 0.2;
