@@ -1,5 +1,12 @@
 // GAME LOOP =========================================================
 
+wnd.object_groups = {
+  background: [],
+  foreground1: [],
+  foreground2: [],
+  overlay: []
+}
+
 // Game state
 var gameplay_on = false;
 var gameplay_frame = 0;
@@ -61,6 +68,26 @@ function loopDestroy(obj) {
     delete obj.tick;
     delete obj.draw;
 }
+
+function addToLoop(group, objs) {
+  if (!objs.length) { objs = [objs]; }
+  objs.forEach(function(obj) {
+    wnd.object_groups[group].push(obj);
+  })
+}
+
+function startGame() {
+  // Flatten loop objects
+  wnd.loop_objects = object_groups.background
+    .concat(object_groups.foreground1)
+    .concat(object_groups.foreground2)
+    .concat(object_groups.overlay);
+
+
+  gameplay_on = true;
+  reqAnimFrame(go);
+}
+
 
 
 // For `temporary debugging

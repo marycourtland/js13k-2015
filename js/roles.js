@@ -20,6 +20,7 @@ var roles = {
 
   game_target: new Role({
     draw: function() {
+      this.drawTopHat(person_color);
       this.drawSash('red');
     },
 

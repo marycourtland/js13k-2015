@@ -1,10 +1,13 @@
-var Platform = function(origin, xres, xrange, ypoints) {
+// `crunch: that constructor is a mess, ha!
+
+var Platform = function(origin, xres, xrange, ypoints, thickness) {
   this.origin = origin; // this is an xy position
   this.y0 = origin.y;
   this.xres = xres;
   this.xres_offset = xrange[0] % xres;
   this.xrange = xrange;
   this.y = ypoints;
+  this.thickness = thickness;
 
   this.yAt = function(x) {
     return this.pointAt(x).y;
@@ -30,7 +33,7 @@ var Platform = function(origin, xres, xrange, ypoints) {
     return pts;
   };
 
-  this.pts = this.getPolygon(6);
+  this.pts = this.getPolygon(this.thickness);
 
   this.drawRepr = function(style) {
     draw.p(ctx, this.pts, style);
@@ -38,9 +41,11 @@ var Platform = function(origin, xres, xrange, ypoints) {
 };
 
 // Make a simple two-point platform
-function makePlatform(origin, x_extent) {
+// `crunch: this might not be really necessary
+// origin is the lower left corner
+function makePlatform(origin, size) {
   var y = {};
-  y[origin.x] = origin.y;
-  y[origin.x + x_extent] = origin.y;
-  return new Platform(origin, x_extent, [origin.x, origin.x + x_extent], y);
+  y[origin.x] = origin.y + size.y;
+  y[origin.x + size.x] = origin.y + size.y;
+  return new Platform(xy(origin.x, origin.y + size.y), size.x, [origin.x, origin.x + size.x], y, size.y);
 }

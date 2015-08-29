@@ -164,7 +164,7 @@ var draw = {
 
 // Game and camera settings
 var game_scale = xy(20, 20) // pixels -> game units conversion
-,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 30)
+,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 40)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
@@ -179,16 +179,23 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
     ]
 
 // Environment
-,   environment_color = '#222'
-,   building_color = '#444'
-,   num_building_clumps = 10
-,   num_buildings_per_clump = 6
-,   building_clump_width = 40
+,   environment_color = '#1b1b1b'
+,   tower_color = '#222'
+,   num_tower_clumps = 30
+,   num_towers_per_clump = 10
+,   tower_clump_width = 80
+
+// Buildings
+,   building_color = '#2E272E'
+,   door_color = '#665'
+,   door_size = xy(0.7, 1.2) // slightly larger than person
 
 // Dynamics
 // *** Gravity estimate is very sensitive to FPS measurement
 ,   min_dynamics_frame = 5
 ,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / bounds(avg_fps * avg_fps, [0, 1000])); } // 9.8 m/s^2 translated to units/frame^2
+,   droneTiltAccel = 0.005
+,   dronePowerAccel = 0.005
 
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
@@ -197,6 +204,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 // People
 ,   person_size = xy(0.3, 0.6)
 ,   person_color = '#000'
+,   person_speed = 0.3
 ,   controlled_person_color = '#300'
 ,   person_control_rate = 0.05 // rate at which control level increases or drops
 ,   min_person_resistance = 2 * person_control_rate
@@ -230,9 +238,9 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   hud_red = '#811'
 ,   hud_green = '#161'
 ,   hud_dial_radius = 1
-,   energy_meter_position = xy(12, 28.5)
+,   energy_meter_position = xy(-12, -1.5)
 ,   energy_meter_size = xy(4, 0.5)
-,   rpm_meter_position = xy(3, 28.5)
+,   rpm_meter_position = xy(-3, -1.5)
 
 ;
 // SETUP =============================================================
@@ -271,13 +279,16 @@ var Camera = {
   }
 }
 
-var Platform = function(origin, xres, xrange, ypoints) {
+// `crunch: that constructor is a mess, ha!
+
+var Platform = function(origin, xres, xrange, ypoints, thickness) {
   this.origin = origin; // this is an xy position
   this.y0 = origin.y;
   this.xres = xres;
   this.xres_offset = xrange[0] % xres;
   this.xrange = xrange;
   this.y = ypoints;
+  this.thickness = thickness;
 
   this.yAt = function(x) {
     return this.pointAt(x).y;
@@ -303,7 +314,7 @@ var Platform = function(origin, xres, xrange, ypoints) {
     return pts;
   };
 
-  this.pts = this.getPolygon(6);
+  this.pts = this.getPolygon(this.thickness);
 
   this.drawRepr = function(style) {
     draw.p(ctx, this.pts, style);
@@ -311,11 +322,80 @@ var Platform = function(origin, xres, xrange, ypoints) {
 };
 
 // Make a simple two-point platform
-function makePlatform(origin, x_extent) {
+// `crunch: this might not be really necessary
+// origin is the lower left corner
+function makePlatform(origin, size) {
   var y = {};
-  y[origin.x] = origin.y;
-  y[origin.x + x_extent] = origin.y;
-  return new Platform(origin, x_extent, [origin.x, origin.x + x_extent], y);
+  y[origin.x] = origin.y + size.y;
+  y[origin.x + size.x] = origin.y + size.y;
+  return new Platform(xy(origin.x, origin.y + size.y), size.x, [origin.x, origin.x + size.x], y, size.y);
+}
+// Buildings:
+// (a) exist on other platforms (like the ground)
+// (b) provide more platforms (like their roof) - NOT FULLY DECIDED/IMPLEMENTED - `todo `decide
+// (c) can store people inside
+// (d) have a doorway to admit people
+
+// position p is the building's center
+
+wnd.buildings = []; // index of all buildings in game
+
+function Building(x0, size, platform) {
+  this.container_platform = platform || environment.ground;
+  this.p = this.container_platform.pointAt(x0); // lower left corner
+  this.size = size; // xy of width and height
+  this.platforms = [];
+  this.people = [];
+  this.door_p = vec_add(this.p, xy(rnd() * this.size.x, 0));
+  this.__proto__.setupPlatform.call(this, makePlatform(this.p, this.size));
+  wnd.buildings.push(this);
+}
+
+Building.prototype = {
+
+  // peopleCounts: maps person role -> number of people
+  prepopulate: function(peopleCounts) {
+    for (var roleName in peopleCounts) {
+      var role = roles[roleName];
+      for (var i = 0; i < peopleCounts[roleName]; i++) {
+        var p = (new Person()).init({platform: this, role: role});
+        this.personEnter(p);
+        addToLoop('foreground1', p);
+      }
+    }
+  },
+
+  tick: function() {
+  },
+
+  draw: function() {
+    this.platforms[0].drawRepr(draw.shapeStyle(building_color));
+    draw.r(ctx, this.door_p, vec_add(this.door_p, door_size), draw.shapeStyle(door_color));
+  },
+
+  setupPlatform: function(platform) {
+    this.platforms.push(platform);
+    // `todo: a way for people to access the platform
+  },
+
+
+  personEnter: function(person) {
+    person.hidden = true;
+    person.platform = this;
+    this.people.push(person);
+  },
+
+  personExit: function() {
+    if (this.people.length === 0) { return; }
+    var person = this.people.shift(); // take first person
+    person.hidden = false;
+    person.platform = this.container_platform;
+    return person;
+  },
+
+  // make it function like a platform
+  pointAt: function() { return xy(this.door_p.x + door_size.x/2, this.door_p.y); },
+  yAt: function() { return this.door_p.y; }
 }
 // ENVIRONMENT =======================================================
 var environment = {
@@ -323,7 +403,7 @@ var environment = {
 
   // Height
   pts: [],
-  buildings: [], // Buildings represented by [x, width, height]
+  towers: [], // Towers in the skyline represented by [x, width, height]
 
 
   // Game loop
@@ -331,22 +411,22 @@ var environment = {
   reset: function() {
     // Background
     // (even though this is drawing-related, it needs to come before anything else)
-    var grd = ctx.createLinearGradient(0, 0, 0, game_size.y);
+    var grd = ctx.createLinearGradient(0, 0, 0, game_size.y * 1.2);
     backgroundGradient.forEach(function(params) {
       grd.addColorStop.apply(grd, params);
     })
     draw.r(ctx, origin, xy(origin.x + game_size.x, origin.y + game_size.y), draw.shapeStyle(grd));
 
-    // Draw buildings (decorative only for now)
-    // (subtract 0.5 so that there's no gap betw ground and building. `temp)=
-    this.buildings.forEach(function(building) {
-      var x1 = building.x - building.w/2;
-      var x2 = building.x + building.w/2;
+    // Draw towers (decorative only for now)
+    // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
+    this.towers.forEach(function(tower) {
+      var x1 = tower.x - tower.w/2;
+      var x2 = tower.x + tower.w/2;
       var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
       draw.r(ctx,
         xy(x1, y0 - 0.5),
-        xy(x2, y0 + building.h),
-        draw.shapeStyle(building_color)
+        xy(x2, y0 + tower.h),
+        draw.shapeStyle(tower_color)
       )
     })
   },
@@ -370,19 +450,19 @@ var environment = {
     }
     this.pts.push(xy(this.ground.xrange[1],0));
 
-    for (var i = 0; i < num_building_clumps; i++) {
+    for (var i = 0; i < num_tower_clumps; i++) {
       console.log('generate #' + i);
-      this.generateBuildingClump();
+      this.generateTowerClump();
     }
   },
 
-  generateBuildingClump: function() {
+  generateTowerClump: function() {
     var x0 = rnds.apply(wnd, this.ground.xrange);
-    var n = num_buildings_per_clump + rnds(-3, 3);
+    var n = num_towers_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
-      this.buildings.push({
-        x: rnds(x0 - building_clump_width/2, x0 + building_clump_width/2),
+      this.towers.push({
+        x: rnds(x0 - tower_clump_width/2, x0 + tower_clump_width/2),
         w: rnds(4, 7),
         h: rnds(5, 20)
       })
@@ -449,11 +529,11 @@ function Actor(p) {
       // Don't do this every frame so that actor doesn't get stuck
       this.v.y = max(this.v.y, 0);
       // this.color = 'red';
+    }
 
-      if (this.stay_on_platform) {
-        // Set y coordinate to be the platform's y coordinate
-        this.p =this.platform.pointAt(this.p.x);
-      }
+    if (this.stay_on_platform) {
+      // Set y coordinate to be the platform's y coordinate
+      this.p =this.platform.pointAt(this.p.x);
     }
 
     this.handleBehavior();
@@ -504,6 +584,7 @@ function Person() {
   this.talking_dir = 0;
   this.stay_on_platform = true;
   this.role = roles.normal;
+  this.hidden = false;
 
   this.init = function(properties) {
     for (var prop in properties) {
@@ -584,7 +665,7 @@ function Person() {
   // Roles ======================================================
 
   this.byRole = function(method) {
-    if (!method in this.role) { console.warn('Uh oh, person role does not have method:', method); return; }
+    if (!(method in this.role)) { console.warn('Uh oh, person role does not have method:', method); return; }
     this.role[method].apply(this);
   }
 
@@ -593,14 +674,15 @@ function Person() {
 
   this.reset = function() {
     this.talking_dir = 0;
-  }
 
-  this.tick = function() {
-    this.__proto__.tick.apply(this);
     if (abs(Player.drone.p.x - this.p.x) < person_interaction_window) {
       close_people_per_tick.push(this);
       this.drone_distance = dist(this.p, Player.drone.p);
     }
+  }
+
+  this.tick = function() {
+    this.__proto__.tick.apply(this);
 
     if (this.control_level < this.resistance && this.control_level > 0) {
       // Decay the control level
@@ -610,6 +692,8 @@ function Person() {
   }
 
   this.draw = function() {
+    if (this.hidden) { return; }
+
     var dir = this.v.x;
     this.drawRepr(this.p, 1.5, draw.shapeStyle(drone_signal_color, {globalAlpha: this.control_level * Player.drone.controlStrength(this)}), dir);
     this.drawRepr(this.p, 1, draw.shapeStyle(this.color), dir);
@@ -672,6 +756,21 @@ function Person() {
     )
   }
 
+  this.drawTopHat = function(color) {
+    var ps = person_size;
+    var y = ps.y + 2*ps.x/3;
+    draw.r(ctx,
+      vec_add(this.p, xy(-ps.x/4, y)),
+      vec_add(this.p, xy(ps.x/4, y + ps.x)),
+      draw.shapeStyle(color)
+    );
+    draw.r(ctx,
+      vec_add(this.p, xy(-ps.x/2, y)),
+      vec_add(this.p, xy(ps.x/2, y + ps.x/3)),
+      draw.shapeStyle(color)
+    );
+  }
+
   this.drawSpeechSquiggles = function(dir) {
     // `crunch
     var x = this.p.x + dir * 0.2;
@@ -722,15 +821,21 @@ function Person() {
     }
     else {
       var closeItem = this.getClosestItem();
+      console.debug('CLOSE ITEM:', closeItem);
       if (closeItem && dist(this.p, closeItem.p) < interaction_distance) {
+      console.debug('Extra close!');
         this.hold(closeItem);
       }
     }
   }
 
   this.useItem = function() {
-    if (!this.inventory_item) { return; }
-    this.inventory_item.use();
+    if (!this.inventory_item) {
+      this.tryToEnterBuilding();
+    }
+    else {
+      this.inventory_item.use(); 
+    }
   }
 
   // `crunch `crunch `crunch - this method is basically the same as drone.getClosestPerson
@@ -739,6 +844,18 @@ function Person() {
     return close_items_per_tick.reduce(function(closestItem, nextItem) {
       return (nextItem.person_distance < closestItem.person_distance ? nextItem : closestItem);
     }, {person_distance:9999});
+  }
+
+  // Buildings/doors
+
+  this.tryToEnterBuilding = function() {
+    var person = this;
+    wnd.buildings.forEach(function(b) {
+      if (dist(person.p, b.door_p) < interaction_distance) {
+        b.personEnter(person);
+        return;
+      }
+    })
   }
 
 
@@ -787,6 +904,7 @@ var roles = {
 
   game_target: new Role({
     draw: function() {
+      this.drawTopHat(person_color);
       this.drawSash('red');
     },
 
@@ -931,23 +1049,23 @@ var Drone = function(loc) {
   // to be more responsive, these methods adjust velocity immediately as well as
   // contributing to acceleration
   this.powerUp = function() {
-    this.v.y += 0.1;
-    this.rpm_scale += 0.01;
+    this.v.y += 0.05;
+    this.rpm_scale += dronePowerAccel;
   }
   
   this.powerDown = function() {
-    this.v.y -= 0.1;
-    this.rpm_scale -= 0.01;
+    this.v.y -= 0.05;
+    this.rpm_scale -= dronePowerAccel;
   }
 
   this.tiltLeft = function() {
     this.v.x -= 0.1;
-    this.rpm_diff -= 0.01;
+    this.rpm_diff -= droneTiltAccel;
   }
 
   this.tiltRight = function() {
     this.v.x += 0.1;
-    this.rpm_diff += 0.01;
+    this.rpm_diff += droneTiltAccel;
   }
 
 
@@ -977,6 +1095,7 @@ var Drone = function(loc) {
   }
 
   this.controlFull = function(person) {
+    if (person === this.person) { return; } // already controlling
     this.uncontrol(); // Only control one at a time!
     this.person = person;
     this.person.color = controlled_person_color;
@@ -988,8 +1107,10 @@ var Drone = function(loc) {
   }
 
   this.attemptControl = function() {
-    // square the control strength so that it's more limited
     var person = this.getClosestPerson();
+    console.debug('Control person:', person);
+
+    // square the control strength so that it's more limited
     if (person && probability(squared(this.controlStrength()))) {
       person.control_level += person_control_rate * 2; // multiplied by two to counteract the decay
       this.control_signal_target = vec_add(person.p, xy(0, person_size.y));
@@ -1009,6 +1130,7 @@ var Drone = function(loc) {
   }
 
   this.getClosestPerson = function() {
+    console.log('close_people_per_tick:', close_people_per_tick);
     if (close_people_per_tick.length === 0) { return null; }
     return close_people_per_tick.reduce(function(closestPerson, nextPerson) {
       return (nextPerson.drone_distance < closestPerson.drone_distance ? nextPerson : closestPerson);
@@ -1037,27 +1159,33 @@ Drone.prototype = new Actor();
 
 var Player = {
   drone: new Drone(xy(10, 10.05)),
+  usingItem: false,
 
-  draw: function() {
-
+  tick: function() {
+    for (var key in this.inputControlMap) {
+      var input = this.inputControlMap[key];
+      if (input.isDown && typeof input.whenDown === 'function') {
+        input.whenDown();
+      }
+    }
   },
 
   inputControlMap: { // `crunch `crunch `crunch
     // map event.which => function
     // ADSW directions for drone
-    65: function() { Player.drone.tiltLeft(); },
-    68: function() { Player.drone.tiltRight(); },
-    83: function() { Player.drone.powerDown(); },
-    87: function() { Player.drone.powerUp(); },
-    37: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x -= 1; },
-    39: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x += 1; },
-    40: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.itemInteract(); },
-    38: function() { Player.drone.person.useItem(); },
-    32: function() {
+    65: {isDown: 0, whenDown: function() { Player.drone.tiltLeft(); }},
+    68: {isDown: 0, whenDown: function() { Player.drone.tiltRight(); }},
+    83: {isDown: 0, whenDown: function() { Player.drone.powerDown(); }},
+    87: {isDown: 0, whenDown: function() { Player.drone.powerUp(); }},
+    37: {isDown: 0, whenDown: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x -= person_speed; }},
+    39: {isDown: 0, whenDown: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x += person_speed; }},
+    40: {isDown: 0, onUp: function() { console.debug('onUp!'); if (probability(Player.drone.controlStrength())) { console.log('ok'); Player.drone.person.itemInteract();} }},
+    38: {isDown: 0, onUp: function() { Player.drone.person.useItem(); }},
+    32: {isDown: 0, whenDown: function() {
       // Player must hold down spacebar for the requisite length of time
       Player.drone.attemptControl();
-    }
-  }
+    }}
+  },
 }
 
 // LIGHTNING  ========================================================
@@ -1111,25 +1239,27 @@ function Item(loc) {
   this.platform = environment.ground;
   this.container = null;
   this.person_distance = null;
-}
 
-Item.prototype.tick = function() {
-  if (this.container) {
-    this.p = vec_add(this.container.p, xy(0.45, 0.2));
-  }
-  else if (Player.drone.person) {
-    // `crunch. This is basically the same as the person/drone stuff in people.js
-    if (abs(Player.drone.person.p.x - this.p.x) < person_interaction_window) {
-      close_items_per_tick.push(this);
-      this.person_distance = dist(this.p, Player.drone.person.p);
-    }      
+  this.reset = function() {
+    if (!this.container && Player.drone.person) {
+      // `crunch. This is basically the same as the person/drone stuff in people.js
+      if (abs(Player.drone.person.p.x - this.p.x) < person_interaction_window) {
+        close_items_per_tick.push(this);
+        this.person_distance = dist(this.p, Player.drone.person.p);
+      }
+    }
   }
 
-  if (!this.container) {
-    // keep it on the ground
-    this.p =this.platform.pointAt(this.p.x);
+  this.tick = function() {
+    if (this.container) {
+      this.p = vec_add(this.container.p, xy(0.45, 0.2));
+    }
+
+    if (!this.container) {
+      // keep it on the ground
+      this.p =this.platform.pointAt(this.p.x);
+    }
   }
-  
 }
 
 // BATTERIES ============================================================
@@ -1195,7 +1325,7 @@ var Hud = {
 
   displays: {
     energy: function() {
-      var p = xy(game_size.x - energy_meter_position.x, energy_meter_position.y);
+      var p = vec_add(vec_add(origin, game_size), energy_meter_position);
       (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color));
 
       p = vec_add(p, xy(1, 0.1));
@@ -1219,7 +1349,7 @@ var Hud = {
     rpm: function() {
       this.drawDial(
         hud_dial_radius,
-        xy(game_size.x - rpm_meter_position.x, rpm_meter_position.y),
+        vec_add(vec_add(origin, game_size), rpm_meter_position),
         Player.drone.rpm_scale,
         [0.82, 0.85]
       );
@@ -1256,17 +1386,33 @@ var Hud = {
 
 
 // GAME EVENTS =======================================================
-
-// `nb: this would be less janky if input check was inside the tick function
+// `crunch: these listeners are similar
 
 window.addEventListener("keydown", function(event) {
-  if (event.which in Player.inputControlMap) {
+  var input = Player.inputControlMap[event.which];
+  if (input) {
     event.preventDefault();
-    Player.inputControlMap[event.which]();
+    input.isDown = 1;
+    if (typeof input.onDown === 'function') { input.onDown(); }
   }
 });
 
+window.addEventListener("keyup", function(event) {
+  var input = Player.inputControlMap[event.which];
+  if (input) {
+    event.preventDefault();
+    input.isDown = 0;
+    if (typeof input.onUp === 'function') { input.onUp(); }
+  }
+});
 // GAME LOOP =========================================================
+
+wnd.object_groups = {
+  background: [],
+  foreground1: [],
+  foreground2: [],
+  overlay: []
+}
 
 // Game state
 var gameplay_on = false;
@@ -1330,6 +1476,26 @@ function loopDestroy(obj) {
     delete obj.draw;
 }
 
+function addToLoop(group, objs) {
+  if (!objs.length) { objs = [objs]; }
+  objs.forEach(function(obj) {
+    wnd.object_groups[group].push(obj);
+  })
+}
+
+function startGame() {
+  // Flatten loop objects
+  wnd.loop_objects = object_groups.background
+    .concat(object_groups.foreground1)
+    .concat(object_groups.foreground2)
+    .concat(object_groups.overlay);
+
+
+  gameplay_on = true;
+  reqAnimFrame(go);
+}
+
+
 
 // For `temporary debugging
 function debug() {
@@ -1345,6 +1511,7 @@ wnd.onFrame = function(frame, callback) {
   gameplay_frame_callbacks[frame] = callback;
 }
 wnd.onload = function() {
+  environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
   wnd.ideas = {
@@ -1355,14 +1522,9 @@ wnd.onload = function() {
     })
   }
 
-  // A sample platform
-  wnd.platform = makePlatform(xy(15, 6), 10);
-  wnd.platform.draw = function() {
-    this.drawRepr(draw.shapeStyle('#2E272E'));
-  }
 
   // `temp sample people/items
-  wnd.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0), platform: wnd.platform});
+  wnd.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0)});
   wnd.p2 = (new Person()).init({p: xy(18, 3)});
   wnd.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
   
@@ -1373,25 +1535,34 @@ wnd.onload = function() {
   wnd.battery1 = new Battery(xy(23, 3));
   wnd.battery2 = new Battery(xy(28, 3));
 
-  wnd.battery1.platform = wnd.platform;
+  wnd.building = new Building(50, xy(10, 20));
 
-  Player.drone.controlFull((new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)}));
+  wnd.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
+  Player.drone.controlFull(p);
 
-  wnd.loop_objects = [
-    battery1, battery2,
-    Player.drone, Player.drone.person, Player,
-    p1, p2, p3, target,
-    wnd.platform,
-    environment, lightning,
-    Camera, Hud
-  ];
-  environment.generate();
 
-  // wnd.onFrame(200, function() {
-  //   Player.drone.uncontrol();
-  // })
+  addToLoop('background', [Player, wnd.building]);
+
+  addToLoop('foreground1', [
+      battery1,
+      battery2,
+      Player.drone,
+      Player.drone.person,
+      p1,
+      p2,
+      p3,
+      target
+  ]);
+
+  addToLoop('foreground2', [
+    environment,
+    lightning
+  ]);
+
+  addToLoop('overlay', [Camera, Hud]);
+
+  building.prepopulate({normal: 5});
   
-  gameplay_on = true;
-  reqAnimFrame(go);
+  startGame();
 };
 })();

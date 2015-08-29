@@ -6,6 +6,7 @@
     "js/setup.js",
     "js/camera.js",
     "js/platforms.js",
+    "js/buildings.js",
     "js/environment.js",
     "js/ideas.js",
     "js/actors.js",

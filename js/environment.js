@@ -4,7 +4,7 @@ var environment = {
 
   // Height
   pts: [],
-  buildings: [], // Buildings represented by [x, width, height]
+  towers: [], // Towers in the skyline represented by [x, width, height]
 
 
   // Game loop
@@ -12,22 +12,22 @@ var environment = {
   reset: function() {
     // Background
     // (even though this is drawing-related, it needs to come before anything else)
-    var grd = ctx.createLinearGradient(0, 0, 0, game_size.y);
+    var grd = ctx.createLinearGradient(0, 0, 0, game_size.y * 1.2);
     backgroundGradient.forEach(function(params) {
       grd.addColorStop.apply(grd, params);
     })
     draw.r(ctx, origin, xy(origin.x + game_size.x, origin.y + game_size.y), draw.shapeStyle(grd));
 
-    // Draw buildings (decorative only for now)
-    // (subtract 0.5 so that there's no gap betw ground and building. `temp)=
-    this.buildings.forEach(function(building) {
-      var x1 = building.x - building.w/2;
-      var x2 = building.x + building.w/2;
+    // Draw towers (decorative only for now)
+    // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
+    this.towers.forEach(function(tower) {
+      var x1 = tower.x - tower.w/2;
+      var x2 = tower.x + tower.w/2;
       var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
       draw.r(ctx,
         xy(x1, y0 - 0.5),
-        xy(x2, y0 + building.h),
-        draw.shapeStyle(building_color)
+        xy(x2, y0 + tower.h),
+        draw.shapeStyle(tower_color)
       )
     })
   },
@@ -51,19 +51,19 @@ var environment = {
     }
     this.pts.push(xy(this.ground.xrange[1],0));
 
-    for (var i = 0; i < num_building_clumps; i++) {
+    for (var i = 0; i < num_tower_clumps; i++) {
       console.log('generate #' + i);
-      this.generateBuildingClump();
+      this.generateTowerClump();
     }
   },
 
-  generateBuildingClump: function() {
+  generateTowerClump: function() {
     var x0 = rnds.apply(wnd, this.ground.xrange);
-    var n = num_buildings_per_clump + rnds(-3, 3);
+    var n = num_towers_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
-      this.buildings.push({
-        x: rnds(x0 - building_clump_width/2, x0 + building_clump_width/2),
+      this.towers.push({
+        x: rnds(x0 - tower_clump_width/2, x0 + tower_clump_width/2),
         w: rnds(4, 7),
         h: rnds(5, 20)
       })

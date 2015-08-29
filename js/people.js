@@ -10,6 +10,7 @@ function Person() {
   this.talking_dir = 0;
   this.stay_on_platform = true;
   this.role = roles.normal;
+  this.hidden = false;
 
   this.init = function(properties) {
     for (var prop in properties) {
@@ -90,7 +91,7 @@ function Person() {
   // Roles ======================================================
 
   this.byRole = function(method) {
-    if (!method in this.role) { console.warn('Uh oh, person role does not have method:', method); return; }
+    if (!(method in this.role)) { console.warn('Uh oh, person role does not have method:', method); return; }
     this.role[method].apply(this);
   }
 
@@ -99,14 +100,15 @@ function Person() {
 
   this.reset = function() {
     this.talking_dir = 0;
-  }
 
-  this.tick = function() {
-    this.__proto__.tick.apply(this);
     if (abs(Player.drone.p.x - this.p.x) < person_interaction_window) {
       close_people_per_tick.push(this);
       this.drone_distance = dist(this.p, Player.drone.p);
     }
+  }
+
+  this.tick = function() {
+    this.__proto__.tick.apply(this);
 
     if (this.control_level < this.resistance && this.control_level > 0) {
       // Decay the control level
@@ -116,6 +118,8 @@ function Person() {
   }
 
   this.draw = function() {
+    if (this.hidden) { return; }
+
     var dir = this.v.x;
     this.drawRepr(this.p, 1.5, draw.shapeStyle(drone_signal_color, {globalAlpha: this.control_level * Player.drone.controlStrength(this)}), dir);
     this.drawRepr(this.p, 1, draw.shapeStyle(this.color), dir);
@@ -178,6 +182,21 @@ function Person() {
     )
   }
 
+  this.drawTopHat = function(color) {
+    var ps = person_size;
+    var y = ps.y + 2*ps.x/3;
+    draw.r(ctx,
+      vec_add(this.p, xy(-ps.x/4, y)),
+      vec_add(this.p, xy(ps.x/4, y + ps.x)),
+      draw.shapeStyle(color)
+    );
+    draw.r(ctx,
+      vec_add(this.p, xy(-ps.x/2, y)),
+      vec_add(this.p, xy(ps.x/2, y + ps.x/3)),
+      draw.shapeStyle(color)
+    );
+  }
+
   this.drawSpeechSquiggles = function(dir) {
     // `crunch
     var x = this.p.x + dir * 0.2;
@@ -228,15 +247,21 @@ function Person() {
     }
     else {
       var closeItem = this.getClosestItem();
+      console.debug('CLOSE ITEM:', closeItem);
       if (closeItem && dist(this.p, closeItem.p) < interaction_distance) {
+      console.debug('Extra close!');
         this.hold(closeItem);
       }
     }
   }
 
   this.useItem = function() {
-    if (!this.inventory_item) { return; }
-    this.inventory_item.use();
+    if (!this.inventory_item) {
+      this.tryToEnterBuilding();
+    }
+    else {
+      this.inventory_item.use(); 
+    }
   }
 
   // `crunch `crunch `crunch - this method is basically the same as drone.getClosestPerson
@@ -245,6 +270,18 @@ function Person() {
     return close_items_per_tick.reduce(function(closestItem, nextItem) {
       return (nextItem.person_distance < closestItem.person_distance ? nextItem : closestItem);
     }, {person_distance:9999});
+  }
+
+  // Buildings/doors
+
+  this.tryToEnterBuilding = function() {
+    var person = this;
+    wnd.buildings.forEach(function(b) {
+      if (dist(person.p, b.door_p) < interaction_distance) {
+        b.personEnter(person);
+        return;
+      }
+    })
   }
 
 
