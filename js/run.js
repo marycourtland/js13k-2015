@@ -50,12 +50,6 @@ wnd.onload = function() {
   addToLoop('overlay', [Camera, Hud]);
 
   building.prepopulate({normal: 5});
-
-  console.debug('BUILDING people:', building.people);
-
-  // wnd.onFrame(200, function() {
-  //   Player.drone.uncontrol();
-  // })
   
   startGame();
 };

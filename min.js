@@ -164,7 +164,7 @@ var draw = {
 
 // Game and camera settings
 var game_scale = xy(20, 20) // pixels -> game units conversion
-,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 30)
+,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 40)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
@@ -194,6 +194,8 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 // *** Gravity estimate is very sensitive to FPS measurement
 ,   min_dynamics_frame = 5
 ,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / bounds(avg_fps * avg_fps, [0, 1000])); } // 9.8 m/s^2 translated to units/frame^2
+,   droneTiltAccel = 0.005
+,   dronePowerAccel = 0.005
 
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
@@ -202,6 +204,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 // People
 ,   person_size = xy(0.3, 0.6)
 ,   person_color = '#000'
+,   person_speed = 0.3
 ,   controlled_person_color = '#300'
 ,   person_control_rate = 0.05 // rate at which control level increases or drops
 ,   min_person_resistance = 2 * person_control_rate
@@ -408,7 +411,7 @@ var environment = {
   reset: function() {
     // Background
     // (even though this is drawing-related, it needs to come before anything else)
-    var grd = ctx.createLinearGradient(0, 0, 0, game_size.y);
+    var grd = ctx.createLinearGradient(0, 0, 0, game_size.y * 1.2);
     backgroundGradient.forEach(function(params) {
       grd.addColorStop.apply(grd, params);
     })
@@ -671,14 +674,15 @@ function Person() {
 
   this.reset = function() {
     this.talking_dir = 0;
-  }
 
-  this.tick = function() {
-    this.__proto__.tick.apply(this);
     if (abs(Player.drone.p.x - this.p.x) < person_interaction_window) {
       close_people_per_tick.push(this);
       this.drone_distance = dist(this.p, Player.drone.p);
     }
+  }
+
+  this.tick = function() {
+    this.__proto__.tick.apply(this);
 
     if (this.control_level < this.resistance && this.control_level > 0) {
       // Decay the control level
@@ -817,7 +821,9 @@ function Person() {
     }
     else {
       var closeItem = this.getClosestItem();
+      console.debug('CLOSE ITEM:', closeItem);
       if (closeItem && dist(this.p, closeItem.p) < interaction_distance) {
+      console.debug('Extra close!');
         this.hold(closeItem);
       }
     }
@@ -845,7 +851,6 @@ function Person() {
   this.tryToEnterBuilding = function() {
     var person = this;
     wnd.buildings.forEach(function(b) {
-      console.log(person.p, b.door_p, dist(person.p, b.door_p), interaction_distance);
       if (dist(person.p, b.door_p) < interaction_distance) {
         b.personEnter(person);
         return;
@@ -1044,23 +1049,23 @@ var Drone = function(loc) {
   // to be more responsive, these methods adjust velocity immediately as well as
   // contributing to acceleration
   this.powerUp = function() {
-    this.v.y += 0.1;
-    this.rpm_scale += 0.01;
+    this.v.y += 0.05;
+    this.rpm_scale += dronePowerAccel;
   }
   
   this.powerDown = function() {
-    this.v.y -= 0.1;
-    this.rpm_scale -= 0.01;
+    this.v.y -= 0.05;
+    this.rpm_scale -= dronePowerAccel;
   }
 
   this.tiltLeft = function() {
     this.v.x -= 0.1;
-    this.rpm_diff -= 0.01;
+    this.rpm_diff -= droneTiltAccel;
   }
 
   this.tiltRight = function() {
     this.v.x += 0.1;
-    this.rpm_diff += 0.01;
+    this.rpm_diff += droneTiltAccel;
   }
 
 
@@ -1103,6 +1108,7 @@ var Drone = function(loc) {
 
   this.attemptControl = function() {
     var person = this.getClosestPerson();
+    console.debug('Control person:', person);
 
     // square the control strength so that it's more limited
     if (person && probability(squared(this.controlStrength()))) {
@@ -1124,6 +1130,7 @@ var Drone = function(loc) {
   }
 
   this.getClosestPerson = function() {
+    console.log('close_people_per_tick:', close_people_per_tick);
     if (close_people_per_tick.length === 0) { return null; }
     return close_people_per_tick.reduce(function(closestPerson, nextPerson) {
       return (nextPerson.drone_distance < closestPerson.drone_distance ? nextPerson : closestPerson);
@@ -1152,27 +1159,33 @@ Drone.prototype = new Actor();
 
 var Player = {
   drone: new Drone(xy(10, 10.05)),
+  usingItem: false,
 
-  draw: function() {
-
+  tick: function() {
+    for (var key in this.inputControlMap) {
+      var input = this.inputControlMap[key];
+      if (input.isDown && typeof input.whenDown === 'function') {
+        input.whenDown();
+      }
+    }
   },
 
   inputControlMap: { // `crunch `crunch `crunch
     // map event.which => function
     // ADSW directions for drone
-    65: function() { Player.drone.tiltLeft(); },
-    68: function() { Player.drone.tiltRight(); },
-    83: function() { Player.drone.powerDown(); },
-    87: function() { Player.drone.powerUp(); },
-    37: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x -= 1; },
-    39: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x += 1; },
-    40: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.itemInteract(); },
-    38: function() { Player.drone.person.useItem(); },
-    32: function() {
+    65: {isDown: 0, whenDown: function() { Player.drone.tiltLeft(); }},
+    68: {isDown: 0, whenDown: function() { Player.drone.tiltRight(); }},
+    83: {isDown: 0, whenDown: function() { Player.drone.powerDown(); }},
+    87: {isDown: 0, whenDown: function() { Player.drone.powerUp(); }},
+    37: {isDown: 0, whenDown: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x -= person_speed; }},
+    39: {isDown: 0, whenDown: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x += person_speed; }},
+    40: {isDown: 0, onUp: function() { console.debug('onUp!'); if (probability(Player.drone.controlStrength())) { console.log('ok'); Player.drone.person.itemInteract();} }},
+    38: {isDown: 0, onUp: function() { Player.drone.person.useItem(); }},
+    32: {isDown: 0, whenDown: function() {
       // Player must hold down spacebar for the requisite length of time
       Player.drone.attemptControl();
-    }
-  }
+    }}
+  },
 }
 
 // LIGHTNING  ========================================================
@@ -1226,25 +1239,27 @@ function Item(loc) {
   this.platform = environment.ground;
   this.container = null;
   this.person_distance = null;
-}
 
-Item.prototype.tick = function() {
-  if (this.container) {
-    this.p = vec_add(this.container.p, xy(0.45, 0.2));
-  }
-  else if (Player.drone.person) {
-    // `crunch. This is basically the same as the person/drone stuff in people.js
-    if (abs(Player.drone.person.p.x - this.p.x) < person_interaction_window) {
-      close_items_per_tick.push(this);
-      this.person_distance = dist(this.p, Player.drone.person.p);
-    }      
+  this.reset = function() {
+    if (!this.container && Player.drone.person) {
+      // `crunch. This is basically the same as the person/drone stuff in people.js
+      if (abs(Player.drone.person.p.x - this.p.x) < person_interaction_window) {
+        close_items_per_tick.push(this);
+        this.person_distance = dist(this.p, Player.drone.person.p);
+      }
+    }
   }
 
-  if (!this.container) {
-    // keep it on the ground
-    this.p =this.platform.pointAt(this.p.x);
+  this.tick = function() {
+    if (this.container) {
+      this.p = vec_add(this.container.p, xy(0.45, 0.2));
+    }
+
+    if (!this.container) {
+      // keep it on the ground
+      this.p =this.platform.pointAt(this.p.x);
+    }
   }
-  
 }
 
 // BATTERIES ============================================================
@@ -1371,16 +1386,25 @@ var Hud = {
 
 
 // GAME EVENTS =======================================================
-
-// `nb: this would be less janky if input check was inside the tick function
+// `crunch: these listeners are similar
 
 window.addEventListener("keydown", function(event) {
-  if (event.which in Player.inputControlMap) {
+  var input = Player.inputControlMap[event.which];
+  if (input) {
     event.preventDefault();
-    Player.inputControlMap[event.which]();
+    input.isDown = 1;
+    if (typeof input.onDown === 'function') { input.onDown(); }
   }
 });
 
+window.addEventListener("keyup", function(event) {
+  var input = Player.inputControlMap[event.which];
+  if (input) {
+    event.preventDefault();
+    input.isDown = 0;
+    if (typeof input.onUp === 'function') { input.onUp(); }
+  }
+});
 // GAME LOOP =========================================================
 
 wnd.object_groups = {
@@ -1538,12 +1562,6 @@ wnd.onload = function() {
   addToLoop('overlay', [Camera, Hud]);
 
   building.prepopulate({normal: 5});
-
-  console.debug('BUILDING people:', building.people);
-
-  // wnd.onFrame(200, function() {
-  //   Player.drone.uncontrol();
-  // })
   
   startGame();
 };

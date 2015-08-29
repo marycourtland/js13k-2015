@@ -12,7 +12,7 @@ var environment = {
   reset: function() {
     // Background
     // (even though this is drawing-related, it needs to come before anything else)
-    var grd = ctx.createLinearGradient(0, 0, 0, game_size.y);
+    var grd = ctx.createLinearGradient(0, 0, 0, game_size.y * 1.2);
     backgroundGradient.forEach(function(params) {
       grd.addColorStop.apply(grd, params);
     })

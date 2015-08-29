@@ -1,10 +1,20 @@
 // GAME EVENTS =======================================================
-
-// `nb: this would be less janky if input check was inside the tick function
+// `crunch: these listeners are similar
 
 window.addEventListener("keydown", function(event) {
-  if (event.which in Player.inputControlMap) {
+  var input = Player.inputControlMap[event.which];
+  if (input) {
     event.preventDefault();
-    Player.inputControlMap[event.which]();
+    input.isDown = 1;
+    if (typeof input.onDown === 'function') { input.onDown(); }
+  }
+});
+
+window.addEventListener("keyup", function(event) {
+  var input = Player.inputControlMap[event.which];
+  if (input) {
+    event.preventDefault();
+    input.isDown = 0;
+    if (typeof input.onUp === 'function') { input.onUp(); }
   }
 });

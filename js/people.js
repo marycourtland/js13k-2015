@@ -100,14 +100,15 @@ function Person() {
 
   this.reset = function() {
     this.talking_dir = 0;
-  }
 
-  this.tick = function() {
-    this.__proto__.tick.apply(this);
     if (abs(Player.drone.p.x - this.p.x) < person_interaction_window) {
       close_people_per_tick.push(this);
       this.drone_distance = dist(this.p, Player.drone.p);
     }
+  }
+
+  this.tick = function() {
+    this.__proto__.tick.apply(this);
 
     if (this.control_level < this.resistance && this.control_level > 0) {
       // Decay the control level
@@ -246,7 +247,9 @@ function Person() {
     }
     else {
       var closeItem = this.getClosestItem();
+      console.debug('CLOSE ITEM:', closeItem);
       if (closeItem && dist(this.p, closeItem.p) < interaction_distance) {
+      console.debug('Extra close!');
         this.hold(closeItem);
       }
     }
@@ -274,7 +277,6 @@ function Person() {
   this.tryToEnterBuilding = function() {
     var person = this;
     wnd.buildings.forEach(function(b) {
-      console.log(person.p, b.door_p, dist(person.p, b.door_p), interaction_distance);
       if (dist(person.p, b.door_p) < interaction_distance) {
         b.personEnter(person);
         return;

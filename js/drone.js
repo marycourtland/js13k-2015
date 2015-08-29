@@ -134,23 +134,23 @@ var Drone = function(loc) {
   // to be more responsive, these methods adjust velocity immediately as well as
   // contributing to acceleration
   this.powerUp = function() {
-    this.v.y += 0.1;
-    this.rpm_scale += 0.01;
+    this.v.y += 0.05;
+    this.rpm_scale += dronePowerAccel;
   }
   
   this.powerDown = function() {
-    this.v.y -= 0.1;
-    this.rpm_scale -= 0.01;
+    this.v.y -= 0.05;
+    this.rpm_scale -= dronePowerAccel;
   }
 
   this.tiltLeft = function() {
     this.v.x -= 0.1;
-    this.rpm_diff -= 0.01;
+    this.rpm_diff -= droneTiltAccel;
   }
 
   this.tiltRight = function() {
     this.v.x += 0.1;
-    this.rpm_diff += 0.01;
+    this.rpm_diff += droneTiltAccel;
   }
 
 
@@ -193,6 +193,7 @@ var Drone = function(loc) {
 
   this.attemptControl = function() {
     var person = this.getClosestPerson();
+    console.debug('Control person:', person);
 
     // square the control strength so that it's more limited
     if (person && probability(squared(this.controlStrength()))) {
@@ -214,6 +215,7 @@ var Drone = function(loc) {
   }
 
   this.getClosestPerson = function() {
+    console.log('close_people_per_tick:', close_people_per_tick);
     if (close_people_per_tick.length === 0) { return null; }
     return close_people_per_tick.reduce(function(closestPerson, nextPerson) {
       return (nextPerson.drone_distance < closestPerson.drone_distance ? nextPerson : closestPerson);
