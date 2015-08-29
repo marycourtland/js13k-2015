@@ -15,7 +15,7 @@ var Hud = {
 
   displays: {
     energy: function() {
-      var p = xy(game_size.x - energy_meter_position.x, energy_meter_position.y);
+      var p = vec_add(vec_add(origin, game_size), energy_meter_position);
       (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color));
 
       p = vec_add(p, xy(1, 0.1));
@@ -39,7 +39,7 @@ var Hud = {
     rpm: function() {
       this.drawDial(
         hud_dial_radius,
-        xy(game_size.x - rpm_meter_position.x, rpm_meter_position.y),
+        vec_add(vec_add(origin, game_size), rpm_meter_position),
         Player.drone.rpm_scale,
         [0.82, 0.85]
       );

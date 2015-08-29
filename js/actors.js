@@ -25,11 +25,11 @@ function Actor(p) {
       // Don't do this every frame so that actor doesn't get stuck
       this.v.y = max(this.v.y, 0);
       // this.color = 'red';
+    }
 
-      if (this.stay_on_platform) {
-        // Set y coordinate to be the platform's y coordinate
-        this.p =this.platform.pointAt(this.p.x);
-      }
+    if (this.stay_on_platform) {
+      // Set y coordinate to be the platform's y coordinate
+      this.p =this.platform.pointAt(this.p.x);
     }
 
     this.handleBehavior();

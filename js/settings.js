@@ -17,11 +17,16 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
     ]
 
 // Environment
-,   environment_color = '#222'
-,   building_color = '#444'
-,   num_building_clumps = 10
-,   num_buildings_per_clump = 6
-,   building_clump_width = 40
+,   environment_color = '#1b1b1b'
+,   tower_color = '#222'
+,   num_tower_clumps = 30
+,   num_towers_per_clump = 10
+,   tower_clump_width = 80
+
+// Buildings
+,   building_color = '#2E272E'
+,   door_color = '#665'
+,   door_size = xy(0.7, 1.2) // slightly larger than person
 
 // Dynamics
 // *** Gravity estimate is very sensitive to FPS measurement
@@ -68,8 +73,8 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   hud_red = '#811'
 ,   hud_green = '#161'
 ,   hud_dial_radius = 1
-,   energy_meter_position = xy(12, 28.5)
+,   energy_meter_position = xy(-12, -1.5)
 ,   energy_meter_size = xy(4, 0.5)
-,   rpm_meter_position = xy(3, 28.5)
+,   rpm_meter_position = xy(-3, -1.5)
 
 ;

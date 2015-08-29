@@ -1,4 +1,5 @@
 wnd.onload = function() {
+  environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
   wnd.ideas = {
@@ -9,14 +10,9 @@ wnd.onload = function() {
     })
   }
 
-  // A sample platform
-  wnd.platform = makePlatform(xy(15, 6), 10);
-  wnd.platform.draw = function() {
-    this.drawRepr(draw.shapeStyle('#2E272E'));
-  }
 
   // `temp sample people/items
-  wnd.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0), platform: wnd.platform});
+  wnd.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0)});
   wnd.p2 = (new Person()).init({p: xy(18, 3)});
   wnd.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
   
@@ -27,24 +23,39 @@ wnd.onload = function() {
   wnd.battery1 = new Battery(xy(23, 3));
   wnd.battery2 = new Battery(xy(28, 3));
 
-  wnd.battery1.platform = wnd.platform;
+  wnd.building = new Building(50, xy(10, 20));
 
-  Player.drone.controlFull((new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)}));
+  wnd.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
+  Player.drone.controlFull(p);
 
-  wnd.loop_objects = [
-    wnd.platform,
-    battery1, battery2,
-    Player.drone, Player.drone.person, Player,
-    p1, p2, p3, target,
-    environment, lightning,
-    Camera, Hud
-  ];
-  environment.generate();
+
+  addToLoop('background', [Player, wnd.building]);
+
+  addToLoop('foreground1', [
+      battery1,
+      battery2,
+      Player.drone,
+      Player.drone.person,
+      p1,
+      p2,
+      p3,
+      target
+  ]);
+
+  addToLoop('foreground2', [
+    environment,
+    lightning
+  ]);
+
+  addToLoop('overlay', [Camera, Hud]);
+
+  building.prepopulate({normal: 5});
+
+  console.debug('BUILDING people:', building.people);
 
   // wnd.onFrame(200, function() {
   //   Player.drone.uncontrol();
   // })
   
-  gameplay_on = true;
-  reqAnimFrame(go);
+  startGame();
 };

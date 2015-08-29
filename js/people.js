@@ -10,6 +10,7 @@ function Person() {
   this.talking_dir = 0;
   this.stay_on_platform = true;
   this.role = roles.normal;
+  this.hidden = false;
 
   this.init = function(properties) {
     for (var prop in properties) {
@@ -90,7 +91,7 @@ function Person() {
   // Roles ======================================================
 
   this.byRole = function(method) {
-    if (!method in this.role) { console.warn('Uh oh, person role does not have method:', method); return; }
+    if (!(method in this.role)) { console.warn('Uh oh, person role does not have method:', method); return; }
     this.role[method].apply(this);
   }
 
@@ -116,6 +117,8 @@ function Person() {
   }
 
   this.draw = function() {
+    if (this.hidden) { return; }
+
     var dir = this.v.x;
     this.drawRepr(this.p, 1.5, draw.shapeStyle(drone_signal_color, {globalAlpha: this.control_level * Player.drone.controlStrength(this)}), dir);
     this.drawRepr(this.p, 1, draw.shapeStyle(this.color), dir);
@@ -250,8 +253,12 @@ function Person() {
   }
 
   this.useItem = function() {
-    if (!this.inventory_item) { return; }
-    this.inventory_item.use();
+    if (!this.inventory_item) {
+      this.tryToEnterBuilding();
+    }
+    else {
+      this.inventory_item.use(); 
+    }
   }
 
   // `crunch `crunch `crunch - this method is basically the same as drone.getClosestPerson
@@ -260,6 +267,19 @@ function Person() {
     return close_items_per_tick.reduce(function(closestItem, nextItem) {
       return (nextItem.person_distance < closestItem.person_distance ? nextItem : closestItem);
     }, {person_distance:9999});
+  }
+
+  // Buildings/doors
+
+  this.tryToEnterBuilding = function() {
+    var person = this;
+    wnd.buildings.forEach(function(b) {
+      console.log(person.p, b.door_p, dist(person.p, b.door_p), interaction_distance);
+      if (dist(person.p, b.door_p) < interaction_distance) {
+        b.personEnter(person);
+        return;
+      }
+    })
   }
 
 
