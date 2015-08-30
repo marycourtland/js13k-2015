@@ -1,8 +1,8 @@
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(15, 15) // pixels -> game units conversion
-,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 30)
+var game_scale = xy(20, 20) // pixels -> game units conversion
+,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 20)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
@@ -15,6 +15,7 @@ var game_scale = xy(15, 15) // pixels -> game units conversion
         [0.4, '#433b4b'],
         [0.0, '#a16e4f']
     ]
+,   awesome_glow_color = '#fff'
 
 // Environment
 ,   environment_color = '#1b1b1b'
