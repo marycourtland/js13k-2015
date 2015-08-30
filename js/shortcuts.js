@@ -1,9 +1,9 @@
 
 // HTML ==============================================================
-var wnd = window
+var global = window
 , doc = document
 , $ = function () { return doc.querySelector.apply(doc, arguments); }
-, reqAnimFrame = wnd.requestAnimationFrame || wnd.mozRequestAnimationFrame
+, reqAnimFrame = global.requestAnimationFrame || global.mozRequestAnimationFrame
 , notify = function(msg) {
     $('#game-message').textContent = msg;
   }

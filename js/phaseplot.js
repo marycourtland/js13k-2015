@@ -6,10 +6,11 @@ var pp_color = 'white';
 var pp_bg_color = 'black';
 
 
-Phaseplot = function(selector, scale, tick) {
+Phaseplot = function(selector, scale, tick, origin_fraction) {
   this.canvas = $(selector);
   this.ctx = this.canvas.getContext('2d');
   this.scale = scale;
+  if (!origin_fraction) { origin_fraction = xy(0.5, 0.5); }
 
   this.u2px = function(pos) {
     return xy(pos.x * this.scale.x, pos.y * this.scale.y);
@@ -24,8 +25,8 @@ Phaseplot = function(selector, scale, tick) {
 
   // (0, 0) is centered
   this.ctx.setTransform(scale.x, 0, 0, -scale.y,
-    scale.x * size_units.x/2,
-    scale.y * size_units.y/2
+    scale.x * size_units.x * origin_fraction.x,
+    scale.y * size_units.y * (1-origin_fraction.y)
   );
 
   this.plotPoint = function(pos) {
@@ -48,6 +49,13 @@ Phaseplot = function(selector, scale, tick) {
   this.plotPoint(xy(0,0));
 }
 
+var pp_drone_xy = new Phaseplot('#phaseplot-drone-xy',
+  xy(2, 20),
+  function() {
+      this.plotPoint(xy(Player.drone.p_drawn.x, Player.drone.p_drawn.y));
+  },
+  xy(0, 0)
+);
 var pp_drone_vx = new Phaseplot('#phaseplot-drone-vx',
   xy(2, 40),
   function() {

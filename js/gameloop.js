@@ -1,6 +1,6 @@
 // GAME LOOP =========================================================
 
-wnd.object_groups = {
+global.object_groups = {
   background: [],
   foreground1: [],
   foreground2: [],
@@ -72,13 +72,13 @@ function loopDestroy(obj) {
 function addToLoop(group, objs) {
   if (!objs.length) { objs = [objs]; }
   objs.forEach(function(obj) {
-    wnd.object_groups[group].push(obj);
+    global.object_groups[group].push(obj);
   })
 }
 
 function startGame() {
   // Flatten loop objects
-  wnd.loop_objects = object_groups.background
+  global.loop_objects = object_groups.background
     .concat(object_groups.foreground1)
     .concat(object_groups.foreground2)
     .concat(object_groups.overlay);
@@ -100,6 +100,6 @@ function debug() {
 // This stuff is sort of `temporary as well
 gameplay_frame_callbacks = {};
 
-wnd.onFrame = function(frame, callback) {
+global.onFrame = function(frame, callback) {
   gameplay_frame_callbacks[frame] = callback;
 }

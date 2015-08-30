@@ -2,11 +2,16 @@
 <html>
   <style>
     body { margin:0; font: 8pt monospace; }
+    #game-layers { position: relative; margin-bottom: 1rem;}
+    #game-layers canvas { position: absolute; top:0; left:0; }
     #game-message { position: absolute; top: 10px; left: 20px; color: #abb;}
     #info { margin-left: 20px; float:left; margin: 1rem; }
   </style>
   <body>
-    <canvas id="game_canvas"></canvas>
+    <div id="game-layers">
+      <canvas id="game_canvas"></canvas>
+      <canvas id="game_overlay"></canvas>
+    </div>
     <div id="game-message"></div>
 
     <div id="info">
@@ -22,6 +27,7 @@
       <p>Retrieve items from your human with <em>&uarr;</em></p>
     </div>
 
+    <canvas id="phaseplot-drone-xy" style="background-color:black;"></canvas>
     <canvas id="phaseplot-drone-vx" style="background-color:black;"></canvas>
     <canvas id="phaseplot-drone-vy" style="background-color:black;"></canvas>
     <canvas id="phaseplot-drone-ay" style="background-color:black;"></canvas>

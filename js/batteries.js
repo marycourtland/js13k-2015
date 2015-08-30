@@ -7,7 +7,8 @@ function Battery(loc) {
   // tick is performed by item object
 
   this.draw = function() {
-    var ga = 0.7 + 0.3*sin(0.06 * gameplay_frame);
+    var ga = 0.7 + 0.3*sin(0.08 * gameplay_frame);
+    ga *= ga;
     this.drawRepr(this.p, 1.5, draw.shapeStyle(awesome_glow_color, {globalAlpha: ga/4}));
     this.drawRepr(this.p, 1.3, draw.shapeStyle(awesome_glow_color, {globalAlpha: ga/2}));
     this.drawRepr(this.p, 1.2, draw.shapeStyle(awesome_glow_color, {globalAlpha: ga}));

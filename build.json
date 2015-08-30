@@ -21,6 +21,6 @@
     "js/events.js",
     "js/gameloop.js",
     "js/run.js",
-    "js/phaseplot.js" // `temp for tweaking stuff
+    "js/phaseplot.js"
   ]
 }

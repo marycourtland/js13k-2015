@@ -57,7 +57,7 @@ var environment = {
   },
 
   generateTowerClump: function() {
-    var x0 = rnds.apply(wnd, this.ground.xrange);
+    var x0 = rnds.apply(global, this.ground.xrange);
     var n = num_towers_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
