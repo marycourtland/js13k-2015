@@ -3,11 +3,12 @@
   <style>
     body { margin:0; font: 8pt monospace; }
     #game-message { position: absolute; top: 10px; left: 20px; color: #abb;}
-    #info { margin-left: 20px; }
+    #info { margin-left: 20px; float:left; margin: 1rem; }
   </style>
   <body>
     <canvas id="game_canvas"></canvas>
     <div id="game-message"></div>
+
     <div id="info">
       <h2>OVERPOWERED (working title)</h2>
       <div id="game-info">
@@ -20,6 +21,11 @@
       <p>Make your human hold/drop items with <em>&darr;</em></p>
       <p>Retrieve items from your human with <em>&uarr;</em></p>
     </div>
+
+    <canvas id="phaseplot-drone-vx" style="background-color:black;"></canvas>
+    <canvas id="phaseplot-drone-vy" style="background-color:black;"></canvas>
+    <canvas id="phaseplot-drone-ay" style="background-color:black;"></canvas>
+    <input type='button' value='Clear' onclick="pp-drone-vx.clear(); pp-drone-vy.clear(); pp-drone-ay.clear();"/>
   </body>
   <script src="min.js"></script>
 </html>

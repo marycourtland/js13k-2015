@@ -1,8 +1,8 @@
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(20, 20) // pixels -> game units conversion
-,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 40)
+var game_scale = xy(15, 15) // pixels -> game units conversion
+,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 30)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
@@ -33,7 +33,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 ,   min_dynamics_frame = 5
 ,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / bounds(avg_fps * avg_fps, [0, 1000])); } // 9.8 m/s^2 translated to units/frame^2
 ,   droneTiltAccel = 0.005
-,   dronePowerAccel = 0.005
+,   dronePowerAccel = 0.0001
 
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame

@@ -32,9 +32,10 @@ var draw = {
   },
 
   // Fill
-  f: function(ctx, color) {
-    this.do(ctx, this.shapeStyle(color), function() {
-      ctx.fillRect(x, y, ctx.canvas.width, ctx.canvas.height);
+  f: function(ctx, params) {
+    params = params || this.shapeStyle("#fff");
+    this.do(ctx, params, function() {
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     })
   },
 

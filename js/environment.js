@@ -52,7 +52,6 @@ var environment = {
     this.pts.push(xy(this.ground.xrange[1],0));
 
     for (var i = 0; i < num_tower_clumps; i++) {
-      console.log('generate #' + i);
       this.generateTowerClump();
     }
   },
