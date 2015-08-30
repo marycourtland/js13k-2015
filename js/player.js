@@ -17,13 +17,13 @@ var Player = {
   inputControlMap: { // `crunch `crunch `crunch
     // map event.which => function
     // ADSW directions for drone
-    65: {isDown: 0, whenDown: function() { Player.drone.tiltLeft(); }},
-    68: {isDown: 0, whenDown: function() { Player.drone.tiltRight(); }},
+    65: {isDown: 0, whenDown: function() { Player.drone.tiltLeft(); }, onDown: function() { Player.drone.startTiltOffset(); }},
+    68: {isDown: 0, whenDown: function() { Player.drone.tiltRight(); }, onDown: function() { Player.drone.startTiltOffset(); }},
     83: {isDown: 0, whenDown: function() { Player.drone.powerDown(); }},
     87: {isDown: 0, whenDown: function() { Player.drone.powerUp(); }},
     37: {isDown: 0, whenDown: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x -= person_speed; }},
     39: {isDown: 0, whenDown: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x += person_speed; }},
-    40: {isDown: 0, onUp: function() { console.debug('onUp!'); if (probability(Player.drone.controlStrength())) { console.log('ok'); Player.drone.person.itemInteract();} }},
+    40: {isDown: 0, onUp: function() { if (probability(Player.drone.controlStrength())) { console.log('ok'); Player.drone.person.itemInteract();} }},
     38: {isDown: 0, onUp: function() { Player.drone.person.useItem(); }},
     32: {isDown: 0, whenDown: function() {
       // Player must hold down spacebar for the requisite length of time

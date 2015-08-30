@@ -6,7 +6,7 @@
 
 // position p is the building's center
 
-wnd.buildings = []; // index of all buildings in game
+global.buildings = []; // index of all buildings in game
 
 function Building(x0, size, platform) {
   this.container_platform = platform || environment.ground;
@@ -16,7 +16,7 @@ function Building(x0, size, platform) {
   this.people = [];
   this.door_p = vec_add(this.p, xy(rnd() * this.size.x, 0));
   this.__proto__.setupPlatform.call(this, makePlatform(this.p, this.size));
-  wnd.buildings.push(this);
+  global.buildings.push(this);
 }
 
 Building.prototype = {

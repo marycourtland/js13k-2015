@@ -1,6 +1,6 @@
 // GAME LOOP =========================================================
 
-wnd.object_groups = {
+global.object_groups = {
   background: [],
   foreground1: [],
   foreground2: [],
@@ -15,7 +15,7 @@ var gameplay_time = 0;
 var gameplay_fps = 0;
 var avg_fps = 0;
 
-var debug_period = 500; // `temp
+var debug_period = 50000; // `temp
 
 // The drone code will only interact with these people (for slightly more efficent operation)
 var close_people_per_tick = [];
@@ -72,13 +72,13 @@ function loopDestroy(obj) {
 function addToLoop(group, objs) {
   if (!objs.length) { objs = [objs]; }
   objs.forEach(function(obj) {
-    wnd.object_groups[group].push(obj);
+    global.object_groups[group].push(obj);
   })
 }
 
 function startGame() {
   // Flatten loop objects
-  wnd.loop_objects = object_groups.background
+  global.loop_objects = object_groups.background
     .concat(object_groups.foreground1)
     .concat(object_groups.foreground2)
     .concat(object_groups.overlay);
@@ -100,6 +100,6 @@ function debug() {
 // This stuff is sort of `temporary as well
 gameplay_frame_callbacks = {};
 
-wnd.onFrame = function(frame, callback) {
+global.onFrame = function(frame, callback) {
   gameplay_frame_callbacks[frame] = callback;
 }

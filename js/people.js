@@ -17,7 +17,7 @@ function Person() {
       this[prop] = properties[prop];
     }
 
-    this.addIdea(wnd.ideas.smalltalk);
+    this.addIdea(global.ideas.smalltalk);
 
     return this;
   }
@@ -85,7 +85,7 @@ function Person() {
   // maybe put it in the Actor
   this.getClosestPerson = function() {
     // `todo `todo `todo!
-    return wnd.p3;
+    return global.p3;
   }
 
   // Roles ======================================================
@@ -121,7 +121,7 @@ function Person() {
     if (this.hidden) { return; }
 
     var dir = this.v.x;
-    this.drawRepr(this.p, 1.5, draw.shapeStyle(drone_signal_color, {globalAlpha: this.control_level * Player.drone.controlStrength(this)}), dir);
+    this.drawRepr(this.p, 1.3, draw.shapeStyle(drone_signal_color, {globalAlpha: this.control_level * Player.drone.controlStrength(this)}), dir);
     this.drawRepr(this.p, 1, draw.shapeStyle(this.color), dir);
 
     if (this.talking_dir !== 0) {
@@ -247,9 +247,7 @@ function Person() {
     }
     else {
       var closeItem = this.getClosestItem();
-      console.debug('CLOSE ITEM:', closeItem);
       if (closeItem && dist(this.p, closeItem.p) < interaction_distance) {
-      console.debug('Extra close!');
         this.hold(closeItem);
       }
     }
@@ -276,7 +274,7 @@ function Person() {
 
   this.tryToEnterBuilding = function() {
     var person = this;
-    wnd.buildings.forEach(function(b) {
+    global.buildings.forEach(function(b) {
       if (dist(person.p, b.door_p) < interaction_distance) {
         b.personEnter(person);
         return;

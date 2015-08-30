@@ -1,8 +1,8 @@
-wnd.onload = function() {
+global.onload = function() {
   environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
-  wnd.ideas = {
+  global.ideas = {
     smalltalk: new Idea('smalltalk'), // this is basically the null/default idea
 
     drone: new Idea('drone', {
@@ -12,24 +12,24 @@ wnd.onload = function() {
 
 
   // `temp sample people/items
-  wnd.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0)});
-  wnd.p2 = (new Person()).init({p: xy(18, 3)});
-  wnd.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
+  global.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0)});
+  global.p2 = (new Person()).init({p: xy(18, 3)});
+  global.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
   
 
   // Game target: if you overpower this one, you win
-  wnd.target = (new Person()).init({p: xy(37, 3), v: xy(-0.05, 0), role: roles.game_target});
+  global.target = (new Person()).init({p: xy(37, 3), v: xy(-0.05, 0), role: roles.game_target});
 
-  wnd.battery1 = new Battery(xy(23, 3));
-  wnd.battery2 = new Battery(xy(28, 3));
+  global.battery1 = new Battery(xy(23, 3));
+  global.battery2 = new Battery(xy(28, 3));
 
-  wnd.building = new Building(50, xy(10, 20));
+  global.building = new Building(50, xy(10, 20));
 
-  wnd.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
+  global.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
   Player.drone.controlFull(p);
 
 
-  addToLoop('background', [Player, wnd.building]);
+  addToLoop('background', [Player, global.building]);
 
   addToLoop('foreground1', [
       battery1,

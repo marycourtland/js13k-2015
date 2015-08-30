@@ -1,7 +1,8 @@
 // THE DRONE =========================================================
 
-var Drone = function(loc) {
-  this.p = loc;
+var Drone = function(p) {
+  this.p = p;
+  this.p_drawn = p;
   this.gravity = true;
   this.energy = 1; // goes from 0 to 1
   this.powered = true;
@@ -11,20 +12,41 @@ var Drone = function(loc) {
   this.rpm_scale = 0.83; // starting value
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
   this.color = 'black';
+  this.tilt = 0; // goes from -pi/2 (left tilt) to pi/2 (right tilt)
+
+  this.offset = 0; //vertical only, for now
+  this.offsets = {}; // map starting frames > offset-computing-functions
+  // `nb: this precludes dual offsets. Could be solved by composing the offset functions
 
   this.person = null,
 
   this.reset = function() {
     this.color = 'black';
+
+    // compute position offset
+    this.offset = 0;
+    for (var frame in this.offsets) {
+      var t = gameplay_frame - frame;
+      var offset = this.offsets[frame](t);
+
+      // Stop computing the offset after it decays enough
+      // `nb: this means there can't be offset patterns which oscillate around 0
+      if (abs(offset) < 0.001) {
+        delete this.offsets[frame];
+      }
+      else {
+        this.offset += offset;
+      }
+    }
   }
 
 
   this.tick = function() {
-    this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
-    this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
-
     // acceleration given by copter blades
     this.v = vec_add(this.v, this.getLiftAccel());
+
+    // decay the tilt
+    this.tilt *= 0.9;
 
     // introduce a good bit of sideways drag
     this.v.x *= 0.95;
@@ -33,18 +55,27 @@ var Drone = function(loc) {
     //this will take care of gravity
     this.__proto__.tick.apply(this);
 
-    this.energy = max(this.energy - this.getEnergyDrain(), 0);;
+    this.energy = max(this.energy - this.getEnergyDrain(), 0);
 
     if (this.energy == 0) {
       this.die();
     }
+
+    // The drone's *actual* drawn position is offset a bit
+    // this is for better aerodynamic fakery
+    this.p_drawn = xy(this.p.x, this.p.y + this.offset);
+
+
+    this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
+    this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
+    this.tilt = bounds(this.tilt, [-pi/2, pi/2]);
   }
 
   this.draw = function() { 
     // signal to person
     if (this.control_signal_target) {
       draw.l(ctx,
-        this.p,
+        this.p_drawn,
         this.control_signal_target,
         draw.lineStyle(drone_signal_color, {globalAlpha: this.controlStrength(this.control_signal_target)})
       );
@@ -52,7 +83,7 @@ var Drone = function(loc) {
     }
 
     // The drone itself
-    this.drawRepr(this.p, 1, draw.shapeStyle(this.color), this.getTilt());
+    this.drawRepr(this.p_drawn, 1, draw.shapeStyle(this.color), this.tilt);
   }
 
   this.drawRepr = function(p, scale, fill, tilt) {
@@ -127,10 +158,6 @@ var Drone = function(loc) {
     return xy(x, y);
   }
 
-  this.getTilt = function() {
-    return (this.rpm_diff + this.v.x/10) * pi/2;
-  }
-
   // to be more responsive, these methods adjust velocity immediately as well as
   // contributing to acceleration
   this.powerUp = function() {
@@ -146,11 +173,17 @@ var Drone = function(loc) {
   this.tiltLeft = function() {
     this.v.x -= 0.1;
     this.rpm_diff -= droneTiltAccel;
+    this.tilt = -max_tilt;
   }
 
   this.tiltRight = function() {
     this.v.x += 0.1;
     this.rpm_diff += droneTiltAccel;
+    this.tilt = max_tilt;
+  }
+
+  this.startTiltOffset = function() {
+    this.offsets[gameplay_frame] = tiltOffset();
   }
 
 
@@ -173,7 +206,7 @@ var Drone = function(loc) {
     this.person.control_level = 0;
 
     // Now the person is eager to talk about their experience
-    this.person.addIdea(wnd.ideas.drone);
+    this.person.addIdea(global.ideas.drone);
     this.person.talkToClosestPerson();
 
     this.person = null;
@@ -201,7 +234,7 @@ var Drone = function(loc) {
       this.control_signal_target = vec_add(person.p, xy(0, person_size.y));
 
       // the person will notice the drone, so they'll get the idea of the drone
-      person.addIdea(wnd.ideas.drone);
+      person.addIdea(global.ideas.drone);
 
     }
     else {

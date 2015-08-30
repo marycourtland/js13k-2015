@@ -1,9 +1,9 @@
 (function() {
 // HTML ==============================================================
-var wnd = window
+var global = window
 , doc = document
 , $ = function () { return doc.querySelector.apply(doc, arguments); }
-, reqAnimFrame = wnd.requestAnimationFrame || wnd.mozRequestAnimationFrame
+, reqAnimFrame = global.requestAnimationFrame || global.mozRequestAnimationFrame
 , notify = function(msg) {
     $('#game-message').textContent = msg;
   }
@@ -102,9 +102,10 @@ var draw = {
   },
 
   // Fill
-  f: function(ctx, color) {
-    this.do(ctx, this.shapeStyle(color), function() {
-      ctx.fillRect(x, y, ctx.canvas.width, ctx.canvas.height);
+  f: function(ctx, params) {
+    params = params || this.shapeStyle("#fff");
+    this.do(ctx, params, function() {
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     })
   },
 
@@ -164,7 +165,7 @@ var draw = {
 
 // Game and camera settings
 var game_scale = xy(20, 20) // pixels -> game units conversion
-,   game_size = xy((wnd.innerWidth - 20)/game_scale.x, 40)
+,   game_size = xy((global.innerWidth - 20)/game_scale.x, 20)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
@@ -177,6 +178,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
         [0.4, '#433b4b'],
         [0.0, '#a16e4f']
     ]
+,   awesome_glow_color = '#fff'
 
 // Environment
 ,   environment_color = '#1b1b1b'
@@ -194,8 +196,19 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 // *** Gravity estimate is very sensitive to FPS measurement
 ,   min_dynamics_frame = 5
 ,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / bounds(avg_fps * avg_fps, [0, 1000])); } // 9.8 m/s^2 translated to units/frame^2
-,   droneTiltAccel = 0.005
-,   dronePowerAccel = 0.005
+,   droneTiltAccel = 0.001
+,   dronePowerAccel = 0.0001
+,   max_tilt = pi/4
+,   tilt_decay = 0.1
+
+,   tiltOffset = function(depth) {
+      // `todo: customize this function with depth; then have successive keydown events (i.e. key being held down) increase the depth
+      return function(t) {
+        t += 1; // so that the zero thingy isn't triggered
+        t *= 0.2; // for scaling
+        return -max(0, 1.5*Math.exp(-t/2)*t/1.5);
+      }
+    }
 
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
@@ -244,18 +257,31 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 
 ;
 // SETUP =============================================================
+
+// `todo: overlay canvas isn't being used right now. Use it for hud etc.
+
 var canvas = $("#game_canvas"),
     ctx = canvas.getContext('2d'),
     origin = xy(0, 0)
 ;
 
-canvas.setAttribute("width", game_size.x * game_scale.x);
-canvas.setAttribute("height", game_size.y * game_scale.y);
+var overlay = $("#game_overlay"),
+    overlay_ctx = overlay.getContext('2d');
+
+
+$("#game-layers").style.height = (game_size.y * game_scale.y) + "px";
+
+[canvas, overlay].forEach(function(c) {
+  c.setAttribute("width", game_size.x * game_scale.x);
+  c.setAttribute("height", game_size.y * game_scale.y);
+});
 
 // x/y grid, origin at lower left corner. Positive is up and rightwards
 // note: it will move left/right as the player moves camera
-ctx.setTransform(game_scale.x, 0, 0, -game_scale.y, 0, game_size.y * game_scale.y);
-ctx.lineWidth = 0;
+[ctx, overlay_ctx].forEach(function(context) {
+  context.setTransform(game_scale.x, 0, 0, -game_scale.y, 0, game_size.y * game_scale.y);
+  context.lineWidth = 0;
+})
 
 
 // CAMERA ============================================================
@@ -338,7 +364,7 @@ function makePlatform(origin, size) {
 
 // position p is the building's center
 
-wnd.buildings = []; // index of all buildings in game
+global.buildings = []; // index of all buildings in game
 
 function Building(x0, size, platform) {
   this.container_platform = platform || environment.ground;
@@ -348,7 +374,7 @@ function Building(x0, size, platform) {
   this.people = [];
   this.door_p = vec_add(this.p, xy(rnd() * this.size.x, 0));
   this.__proto__.setupPlatform.call(this, makePlatform(this.p, this.size));
-  wnd.buildings.push(this);
+  global.buildings.push(this);
 }
 
 Building.prototype = {
@@ -451,13 +477,12 @@ var environment = {
     this.pts.push(xy(this.ground.xrange[1],0));
 
     for (var i = 0; i < num_tower_clumps; i++) {
-      console.log('generate #' + i);
       this.generateTowerClump();
     }
   },
 
   generateTowerClump: function() {
-    var x0 = rnds.apply(wnd, this.ground.xrange);
+    var x0 = rnds.apply(global, this.ground.xrange);
     var n = num_towers_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
@@ -591,7 +616,7 @@ function Person() {
       this[prop] = properties[prop];
     }
 
-    this.addIdea(wnd.ideas.smalltalk);
+    this.addIdea(global.ideas.smalltalk);
 
     return this;
   }
@@ -659,7 +684,7 @@ function Person() {
   // maybe put it in the Actor
   this.getClosestPerson = function() {
     // `todo `todo `todo!
-    return wnd.p3;
+    return global.p3;
   }
 
   // Roles ======================================================
@@ -695,7 +720,7 @@ function Person() {
     if (this.hidden) { return; }
 
     var dir = this.v.x;
-    this.drawRepr(this.p, 1.5, draw.shapeStyle(drone_signal_color, {globalAlpha: this.control_level * Player.drone.controlStrength(this)}), dir);
+    this.drawRepr(this.p, 1.3, draw.shapeStyle(drone_signal_color, {globalAlpha: this.control_level * Player.drone.controlStrength(this)}), dir);
     this.drawRepr(this.p, 1, draw.shapeStyle(this.color), dir);
 
     if (this.talking_dir !== 0) {
@@ -821,9 +846,7 @@ function Person() {
     }
     else {
       var closeItem = this.getClosestItem();
-      console.debug('CLOSE ITEM:', closeItem);
       if (closeItem && dist(this.p, closeItem.p) < interaction_distance) {
-      console.debug('Extra close!');
         this.hold(closeItem);
       }
     }
@@ -850,7 +873,7 @@ function Person() {
 
   this.tryToEnterBuilding = function() {
     var person = this;
-    wnd.buildings.forEach(function(b) {
+    global.buildings.forEach(function(b) {
       if (dist(person.p, b.door_p) < interaction_distance) {
         b.personEnter(person);
         return;
@@ -915,8 +938,9 @@ var roles = {
 }
 // THE DRONE =========================================================
 
-var Drone = function(loc) {
-  this.p = loc;
+var Drone = function(p) {
+  this.p = p;
+  this.p_drawn = p;
   this.gravity = true;
   this.energy = 1; // goes from 0 to 1
   this.powered = true;
@@ -926,20 +950,41 @@ var Drone = function(loc) {
   this.rpm_scale = 0.83; // starting value
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
   this.color = 'black';
+  this.tilt = 0; // goes from -pi/2 (left tilt) to pi/2 (right tilt)
+
+  this.offset = 0; //vertical only, for now
+  this.offsets = {}; // map starting frames > offset-computing-functions
+  // `nb: this precludes dual offsets. Could be solved by composing the offset functions
 
   this.person = null,
 
   this.reset = function() {
     this.color = 'black';
+
+    // compute position offset
+    this.offset = 0;
+    for (var frame in this.offsets) {
+      var t = gameplay_frame - frame;
+      var offset = this.offsets[frame](t);
+
+      // Stop computing the offset after it decays enough
+      // `nb: this means there can't be offset patterns which oscillate around 0
+      if (abs(offset) < 0.001) {
+        delete this.offsets[frame];
+      }
+      else {
+        this.offset += offset;
+      }
+    }
   }
 
 
   this.tick = function() {
-    this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
-    this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
-
     // acceleration given by copter blades
     this.v = vec_add(this.v, this.getLiftAccel());
+
+    // decay the tilt
+    this.tilt *= 0.9;
 
     // introduce a good bit of sideways drag
     this.v.x *= 0.95;
@@ -948,18 +993,27 @@ var Drone = function(loc) {
     //this will take care of gravity
     this.__proto__.tick.apply(this);
 
-    this.energy = max(this.energy - this.getEnergyDrain(), 0);;
+    this.energy = max(this.energy - this.getEnergyDrain(), 0);
 
     if (this.energy == 0) {
       this.die();
     }
+
+    // The drone's *actual* drawn position is offset a bit
+    // this is for better aerodynamic fakery
+    this.p_drawn = xy(this.p.x, this.p.y + this.offset);
+
+
+    this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
+    this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
+    this.tilt = bounds(this.tilt, [-pi/2, pi/2]);
   }
 
   this.draw = function() { 
     // signal to person
     if (this.control_signal_target) {
       draw.l(ctx,
-        this.p,
+        this.p_drawn,
         this.control_signal_target,
         draw.lineStyle(drone_signal_color, {globalAlpha: this.controlStrength(this.control_signal_target)})
       );
@@ -967,7 +1021,7 @@ var Drone = function(loc) {
     }
 
     // The drone itself
-    this.drawRepr(this.p, 1, draw.shapeStyle(this.color), this.getTilt());
+    this.drawRepr(this.p_drawn, 1, draw.shapeStyle(this.color), this.tilt);
   }
 
   this.drawRepr = function(p, scale, fill, tilt) {
@@ -1042,10 +1096,6 @@ var Drone = function(loc) {
     return xy(x, y);
   }
 
-  this.getTilt = function() {
-    return (this.rpm_diff + this.v.x/10) * pi/2;
-  }
-
   // to be more responsive, these methods adjust velocity immediately as well as
   // contributing to acceleration
   this.powerUp = function() {
@@ -1061,11 +1111,17 @@ var Drone = function(loc) {
   this.tiltLeft = function() {
     this.v.x -= 0.1;
     this.rpm_diff -= droneTiltAccel;
+    this.tilt = -max_tilt;
   }
 
   this.tiltRight = function() {
     this.v.x += 0.1;
     this.rpm_diff += droneTiltAccel;
+    this.tilt = max_tilt;
+  }
+
+  this.startTiltOffset = function() {
+    this.offsets[gameplay_frame] = tiltOffset();
   }
 
 
@@ -1088,7 +1144,7 @@ var Drone = function(loc) {
     this.person.control_level = 0;
 
     // Now the person is eager to talk about their experience
-    this.person.addIdea(wnd.ideas.drone);
+    this.person.addIdea(global.ideas.drone);
     this.person.talkToClosestPerson();
 
     this.person = null;
@@ -1116,7 +1172,7 @@ var Drone = function(loc) {
       this.control_signal_target = vec_add(person.p, xy(0, person_size.y));
 
       // the person will notice the drone, so they'll get the idea of the drone
-      person.addIdea(wnd.ideas.drone);
+      person.addIdea(global.ideas.drone);
 
     }
     else {
@@ -1173,13 +1229,13 @@ var Player = {
   inputControlMap: { // `crunch `crunch `crunch
     // map event.which => function
     // ADSW directions for drone
-    65: {isDown: 0, whenDown: function() { Player.drone.tiltLeft(); }},
-    68: {isDown: 0, whenDown: function() { Player.drone.tiltRight(); }},
+    65: {isDown: 0, whenDown: function() { Player.drone.tiltLeft(); }, onDown: function() { Player.drone.startTiltOffset(); }},
+    68: {isDown: 0, whenDown: function() { Player.drone.tiltRight(); }, onDown: function() { Player.drone.startTiltOffset(); }},
     83: {isDown: 0, whenDown: function() { Player.drone.powerDown(); }},
     87: {isDown: 0, whenDown: function() { Player.drone.powerUp(); }},
     37: {isDown: 0, whenDown: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x -= person_speed; }},
     39: {isDown: 0, whenDown: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x += person_speed; }},
-    40: {isDown: 0, onUp: function() { console.debug('onUp!'); if (probability(Player.drone.controlStrength())) { console.log('ok'); Player.drone.person.itemInteract();} }},
+    40: {isDown: 0, onUp: function() { if (probability(Player.drone.controlStrength())) { console.log('ok'); Player.drone.person.itemInteract();} }},
     38: {isDown: 0, onUp: function() { Player.drone.person.useItem(); }},
     32: {isDown: 0, whenDown: function() {
       // Player must hold down spacebar for the requisite length of time
@@ -1271,13 +1327,18 @@ function Battery(loc) {
   // tick is performed by item object
 
   this.draw = function() {
+    var ga = 0.7 + 0.3*sin(0.08 * gameplay_frame);
+    ga *= ga;
+    this.drawRepr(this.p, 1.5, draw.shapeStyle(awesome_glow_color, {globalAlpha: ga/4}));
+    this.drawRepr(this.p, 1.3, draw.shapeStyle(awesome_glow_color, {globalAlpha: ga/2}));
+    this.drawRepr(this.p, 1.2, draw.shapeStyle(awesome_glow_color, {globalAlpha: ga}));
     this.drawRepr(this.p, 1, draw.shapeStyle(battery_color));
   }
 
   this.use = function() {
     // Batteries get used by the drone
     // `todo (when energy stuff is implemented): fill drone battery level
-    if (dist(this.p, Player.drone.p) > interaction_distance) { return; }
+    if (dist(this.p, Player.drone.p) > 3*interaction_distance) { return; }
     loopDestroy(this);
     if (this.container) this.container.drop();
     Player.drone.fillEnergy();
@@ -1388,13 +1449,19 @@ var Hud = {
 // GAME EVENTS =======================================================
 // `crunch: these listeners are similar
 
+var keys_down = {};
+
 window.addEventListener("keydown", function(event) {
+
   var input = Player.inputControlMap[event.which];
   if (input) {
     event.preventDefault();
     input.isDown = 1;
-    if (typeof input.onDown === 'function') { input.onDown(); }
+    if (!(event.which in keys_down) || !keys_down[event.which] && typeof input.onDown === 'function') {
+      input.onDown();
+    }
   }
+  keys_down[event.which] = true;
 });
 
 window.addEventListener("keyup", function(event) {
@@ -1404,10 +1471,11 @@ window.addEventListener("keyup", function(event) {
     input.isDown = 0;
     if (typeof input.onUp === 'function') { input.onUp(); }
   }
+  keys_down[event.which] = false;
 });
 // GAME LOOP =========================================================
 
-wnd.object_groups = {
+global.object_groups = {
   background: [],
   foreground1: [],
   foreground2: [],
@@ -1422,7 +1490,7 @@ var gameplay_time = 0;
 var gameplay_fps = 0;
 var avg_fps = 0;
 
-var debug_period = 500; // `temp
+var debug_period = 50000; // `temp
 
 // The drone code will only interact with these people (for slightly more efficent operation)
 var close_people_per_tick = [];
@@ -1479,13 +1547,13 @@ function loopDestroy(obj) {
 function addToLoop(group, objs) {
   if (!objs.length) { objs = [objs]; }
   objs.forEach(function(obj) {
-    wnd.object_groups[group].push(obj);
+    global.object_groups[group].push(obj);
   })
 }
 
 function startGame() {
   // Flatten loop objects
-  wnd.loop_objects = object_groups.background
+  global.loop_objects = object_groups.background
     .concat(object_groups.foreground1)
     .concat(object_groups.foreground2)
     .concat(object_groups.overlay);
@@ -1507,14 +1575,14 @@ function debug() {
 // This stuff is sort of `temporary as well
 gameplay_frame_callbacks = {};
 
-wnd.onFrame = function(frame, callback) {
+global.onFrame = function(frame, callback) {
   gameplay_frame_callbacks[frame] = callback;
 }
-wnd.onload = function() {
+global.onload = function() {
   environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
-  wnd.ideas = {
+  global.ideas = {
     smalltalk: new Idea('smalltalk'), // this is basically the null/default idea
 
     drone: new Idea('drone', {
@@ -1524,24 +1592,24 @@ wnd.onload = function() {
 
 
   // `temp sample people/items
-  wnd.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0)});
-  wnd.p2 = (new Person()).init({p: xy(18, 3)});
-  wnd.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
+  global.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0)});
+  global.p2 = (new Person()).init({p: xy(18, 3)});
+  global.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
   
 
   // Game target: if you overpower this one, you win
-  wnd.target = (new Person()).init({p: xy(37, 3), v: xy(-0.05, 0), role: roles.game_target});
+  global.target = (new Person()).init({p: xy(37, 3), v: xy(-0.05, 0), role: roles.game_target});
 
-  wnd.battery1 = new Battery(xy(23, 3));
-  wnd.battery2 = new Battery(xy(28, 3));
+  global.battery1 = new Battery(xy(23, 3));
+  global.battery2 = new Battery(xy(28, 3));
 
-  wnd.building = new Building(50, xy(10, 20));
+  global.building = new Building(50, xy(10, 20));
 
-  wnd.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
+  global.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
   Player.drone.controlFull(p);
 
 
-  addToLoop('background', [Player, wnd.building]);
+  addToLoop('background', [Player, global.building]);
 
   addToLoop('foreground1', [
       battery1,
@@ -1565,4 +1633,81 @@ wnd.onload = function() {
   
   startGame();
 };
+// Purpose of this thing is to debug the drone movement
+// it will not go in final game
+
+var pp_size = xy(250, 250); // in PIXELS (unlike main canvas's game_size)
+var pp_color = 'white';
+var pp_bg_color = 'black';
+
+
+Phaseplot = function(selector, scale, tick, origin_fraction) {
+  this.canvas = $(selector);
+  this.ctx = this.canvas.getContext('2d');
+  this.scale = scale;
+  if (!origin_fraction) { origin_fraction = xy(0.5, 0.5); }
+
+  this.u2px = function(pos) {
+    return xy(pos.x * this.scale.x, pos.y * this.scale.y);
+  }
+
+  var single_pixel_size = xy(1/this.scale.x, 1/this.scale.y);
+
+  var size_units = xy(pp_size.x / this.scale.x, pp_size.y / this.scale.y);
+
+  this.canvas.setAttribute("width", pp_size.x + "px");
+  this.canvas.setAttribute("height", pp_size.y + "px");
+
+  // (0, 0) is centered
+  this.ctx.setTransform(scale.x, 0, 0, -scale.y,
+    scale.x * size_units.x * origin_fraction.x,
+    scale.y * size_units.y * (1-origin_fraction.y)
+  );
+
+  this.plotPoint = function(pos) {
+    draw.r(this.ctx, pos, vec_add(pos, single_pixel_size), draw.shapeStyle(pp_color));
+  }
+
+  this.clear = function() {
+    draw.clr(this.ctx);
+  }
+
+  // Record drone position/velocity
+  this.tick = tick;
+
+  this.draw = function() {
+    draw.r(this.ctx, xy(-size_units.x, -size_units.y), size_units,  draw.shapeStyle('black', {globalAlpha: 0.005})); // Slowly fade out old tracks
+  }
+
+  addToLoop('overlay', this);
+
+  this.plotPoint(xy(0,0));
+}
+
+var pp_drone_xy = new Phaseplot('#phaseplot-drone-xy',
+  xy(2, 20),
+  function() {
+      this.plotPoint(xy(Player.drone.p_drawn.x, Player.drone.p_drawn.y));
+  },
+  xy(0, 0)
+);
+var pp_drone_vx = new Phaseplot('#phaseplot-drone-vx',
+  xy(2, 40),
+  function() {
+      this.plotPoint(xy(Player.drone.p.x, Player.drone.v.x));
+  }
+);
+var pp_drone_vy = new Phaseplot('#phaseplot-drone-vy',
+  xy(30, 2),
+  function() {
+      this.plotPoint(xy(Player.drone.v.y, Player.drone.p.y));
+  }
+);
+var pp_drone_ay = new Phaseplot('#phaseplot-drone-ay',
+  xy(20, 300000),
+  function() {
+      this.plotPoint(xy(Player.drone.v.y, Player.drone.getLiftAccel().y + gravAccel().y));
+  }
+);
+
 })();

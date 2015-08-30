@@ -52,13 +52,12 @@ var environment = {
     this.pts.push(xy(this.ground.xrange[1],0));
 
     for (var i = 0; i < num_tower_clumps; i++) {
-      console.log('generate #' + i);
       this.generateTowerClump();
     }
   },
 
   generateTowerClump: function() {
-    var x0 = rnds.apply(wnd, this.ground.xrange);
+    var x0 = rnds.apply(global, this.ground.xrange);
     var n = num_towers_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
