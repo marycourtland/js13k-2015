@@ -38,14 +38,13 @@ Building.prototype = {
 
   draw: function() {
     this.platforms[0].drawRepr(draw.shapeStyle(building_color));
-    draw.r(ctx, this.door_p, vec_add(this.door_p, door_size), draw.shapeStyle(door_color));
+    draw.r(stage.ctx, this.door_p, vec_add(this.door_p, door_size), draw.shapeStyle(door_color));
   },
 
   setupPlatform: function(platform) {
     this.platforms.push(platform);
     // `todo: a way for people to access the platform
   },
-
 
   personEnter: function(person) {
     person.hidden = true;

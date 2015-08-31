@@ -12,11 +12,11 @@ var environment = {
   reset: function() {
     // Background
     // (even though this is drawing-related, it needs to come before anything else)
-    var grd = ctx.createLinearGradient(0, 0, 0, game_size.y * 1.2);
+    var grd = bg.ctx.createLinearGradient(0, 0, 0, bg.size.y * 1.2);
     backgroundGradient.forEach(function(params) {
       grd.addColorStop.apply(grd, params);
     })
-    draw.r(ctx, origin, xy(origin.x + game_size.x, origin.y + game_size.y), draw.shapeStyle(grd));
+    draw.r(bg.ctx, bg.origin, xy(bg.origin.x + bg.size.x, bg.origin.y + bg.size.y), draw.shapeStyle(grd));
 
     // Draw towers (decorative only for now)
     // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
@@ -24,12 +24,14 @@ var environment = {
       var x1 = tower.x - tower.w/2;
       var x2 = tower.x + tower.w/2;
       var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
-      draw.r(ctx,
+      draw.r(bg.ctx,
         xy(x1, y0 - 0.5),
         xy(x2, y0 + tower.h),
         draw.shapeStyle(tower_color)
       )
-    })
+    });
+
+    stage.clear();
   },
 
 
@@ -38,7 +40,7 @@ var environment = {
   draw: function() {
     // Ground
     var fill = draw.shapeStyle(environment_color);
-    draw.p(ctx, this.pts, fill);
+    draw.p(stage.ctx, this.pts, fill);
   },
 
   generate: function() {

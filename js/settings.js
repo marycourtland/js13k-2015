@@ -1,8 +1,8 @@
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(20, 20) // pixels -> game units conversion
-,   game_size = xy((global.innerWidth - 20)/game_scale.x, 20)
+var game_scale = xy(18, 18) // pixels -> game units conversion
+,   game_size = xy((global.innerWidth - 20)/game_scale.x, 30)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
@@ -49,13 +49,13 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
-,   lightning_chance_drone = 0.05   // Of each lightning strike, chance that it will hit the drone
+,   lightning_chance_drone = 0.3   // Of each lightning strike, chance that it will hit the drone
 
 // People
 ,   person_size = xy(0.3, 0.6)
 ,   person_color = '#000'
 ,   person_speed = 0.3
-,   controlled_person_color = '#300'
+,   controlled_person_color = '#000'
 ,   person_control_rate = 0.05 // rate at which control level increases or drops
 ,   min_person_resistance = 2 * person_control_rate
 ,   person_interaction_window = 8

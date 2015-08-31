@@ -45,6 +45,7 @@ function go(time) {
   close_people_per_tick = [];
   close_items_per_tick = []; // `crunch
 
+  loop_objects.forEach(function(obj) { obj.skip_tick = false; });
   loop_objects.forEach(resetify);
   loop_objects.forEach(tickity);
   loop_objects.forEach(drawity);

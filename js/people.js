@@ -1,6 +1,7 @@
 // PEOPLE ============================================================
 
 function Person() {
+  var ctx = stage.ctx;
   this.p = xy(0, 0);
   this.color = person_color;
   this.drone_distance = null; // only relevant when person is within the interaction window
