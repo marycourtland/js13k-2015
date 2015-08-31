@@ -21,8 +21,6 @@ var Drone = function(p) {
   this.person = null,
 
   this.reset = function() {
-    this.color = 'black';
-
     // compute position offset
     this.offset = 0;
     for (var frame in this.offsets) {

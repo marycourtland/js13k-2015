@@ -52,25 +52,26 @@ Phaseplot = function(selector, scale, tick, origin_fraction) {
 var pp_drone_xy = new Phaseplot('#phaseplot-drone-xy',
   xy(2, 20),
   function() {
-      this.plotPoint(xy(Player.drone.p_drawn.x, Player.drone.p_drawn.y));
+    this.plotPoint(xy(Player.drone.p_drawn.x, Player.drone.p_drawn.y));
   },
   xy(0, 0)
 );
 var pp_drone_vx = new Phaseplot('#phaseplot-drone-vx',
   xy(2, 40),
   function() {
-      this.plotPoint(xy(Player.drone.p.x, Player.drone.v.x));
+    this.plotPoint(xy(Player.drone.p.x, Player.drone.v.x));
   }
 );
 var pp_drone_vy = new Phaseplot('#phaseplot-drone-vy',
   xy(30, 2),
   function() {
-      this.plotPoint(xy(Player.drone.v.y, Player.drone.p.y));
-  }
+    this.plotPoint(xy(Player.drone.v.y, Player.drone.p.y));
+  },
+  xy(0.5, 0)
 );
 var pp_drone_ay = new Phaseplot('#phaseplot-drone-ay',
   xy(20, 300000),
   function() {
-      this.plotPoint(xy(Player.drone.v.y, Player.drone.getLiftAccel().y + gravAccel().y));
+    this.plotPoint(xy(Player.drone.v.y, Player.drone.getLiftAccel().y + gravAccel().y));
   }
 );

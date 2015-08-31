@@ -9,7 +9,7 @@ window.addEventListener("keydown", function(event) {
   if (input) {
     event.preventDefault();
     input.isDown = 1;
-    if (!(event.which in keys_down) || !keys_down[event.which] && typeof input.onDown === 'function') {
+    if ((!(event.which in keys_down) || !keys_down[event.which]) && typeof input.onDown === 'function') {
       input.onDown();
     }
   }

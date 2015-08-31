@@ -16,6 +16,9 @@ var global = window
 , dist = function(p1, p2) {
     return Math.sqrt(squared(p1.x - p2.x) + squared(p1.y - p2.y));
   }
+, midpoint = function(p1, p2) {
+    return xy(p1.x + (p2.x - p1.x)/2, p1.y + (p2.y - p1.y)/2);
+  }
 , sin = Math.sin
 , cos = Math.cos
 , abs = Math.abs
@@ -62,7 +65,7 @@ var global = window
 
 // other stuff...
 , resetify = function(item) { if (item.reset) item.reset(); }
-, tickity = function(item) { if (item.tick) item.tick(); }
+, tickity = function(item) { if (item.tick && !item.skip_tick) item.tick(); }
 , drawity = function(item) { if (item.draw) item.draw(); }
 
 , null_function = function() {}
@@ -164,8 +167,8 @@ var draw = {
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(20, 20) // pixels -> game units conversion
-,   game_size = xy((global.innerWidth - 20)/game_scale.x, 20)
+var game_scale = xy(15, 15) // pixels -> game units conversion
+,   game_size = xy((global.innerWidth - 20)/game_scale.x, 30)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
@@ -212,7 +215,7 @@ var game_scale = xy(20, 20) // pixels -> game units conversion
 
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
-,   lightning_chance_drone = 0.05   // Of each lightning strike, chance that it will hit the drone
+,   lightning_chance_drone = 0.3   // Of each lightning strike, chance that it will hit the drone
 
 // People
 ,   person_size = xy(0.3, 0.6)
@@ -959,8 +962,6 @@ var Drone = function(p) {
   this.person = null,
 
   this.reset = function() {
-    this.color = 'black';
-
     // compute position offset
     this.offset = 0;
     for (var frame in this.offsets) {
@@ -1248,14 +1249,30 @@ var Player = {
 // `experiment
 lightning = {
   timeleft: -1,
-  pts: [[]],
+  target: null,
+  pts: [],
+  onFinish: null,
+
+  reset: function() {
+    if (this.target) {
+      this.target.skip_tick = true; // freeze the object for the duration of the lightning strike
+    }
+  },
+
   tick: function() {
     if (this.timeleft >= 0) {
       this.timeleft -= 1;
     }
+    else {
+      this.target = null;
+      if (typeof this.onFinish === 'function') { this.onFinish(); this.onFinish = null; }
+    }
 
-    if (probability(lightning_chance)) { this.strike(); }
+    if (probability(lightning_chance)) {
+      probability(lightning_chance_drone) ? this.strikeDrone() : this.strike();
+    }
   },
+
   draw: function() {
     if (this.timeleft < 0) { return; }
     var glowdata = [
@@ -1270,7 +1287,10 @@ lightning = {
       draw.p(ctx, pts, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2]}))
     })
   },
-  redraw: function() {
+
+  // original algorithm - random walk
+  // `nb - this is not used anymore! So I guess it's `temp
+  regenerate_randomwalk: function() {
     // Pick an origin point in the sky and random walk downwards
     var x = rnds(game_size.x + origin.x), y = game_size.y;
     this.pts = [xy(x, y)];
@@ -1281,10 +1301,79 @@ lightning = {
       this.pts.push(xy(x, y));
     }
   },
-  strike: function() {
-    this.redraw();
+
+  strikeDrone: function() {
+    this.target = Player.drone;
+    this.strike(Player.drone.p_drawn);
+    var old_drone_color = Player.drone.color;
+    Player.drone.color = '#bbf';
+    this.onFinish = function() {
+      Player.drone.color = old_drone_color;
+      console.debug('Done');
+    }
+  },
+
+  strike: function(target_pos) {
+    if (!target_pos) {
+      var x = rnds(game_size.x + origin.x)
+      target_pos = environment.ground.pointAt(x);
+    }
+    var origin_pos = xy(target_pos.x + rnds(-5, 5), game_size.y)
+
+    this.regenerate(origin_pos, target_pos);
     this.timeleft = rnds(10, 50);
+  },
+
+  // NEW ALGORITHM
+  regenerate: function(origin, dest) {
+    var seg0 = {p1: origin, p2: dest, children: []};
+    this.populateSegmentChildren(seg0, 6);
+    this.pts = this.getPoints(seg0);
+    this.pts.push(seg0.p2);
+    this.seg = seg0;
+  },
+
+  populateSegmentChildren: function(seg, iterations) {
+    iterations = iterations || 0;
+    if (iterations < 0) { return seg; }
+
+    var d = dist(seg.p1, seg.p2);
+    midpt_offset = rth(d * rnds(0.07, 0.1), Math.asin(( seg.p2.x - seg.p1.x)/d));
+    if (rnd() < 0.5) { midpt_offset.r *= -1; }
+    midpt_offset.th += rnds(-pi/4, pi/4);
+    midpt_offset = polar2cart(midpt_offset);
+
+    var perturbed_midpoint = xy(seg.p1.x + (seg.p2.x - seg.p1.x) * rnds(0.3, 0.7), seg.p1.y + (seg.p2.y - seg.p1.y) * rnds(0.3, 0.7));
+    var midpt = vec_add(
+      perturbed_midpoint,
+      midpt_offset
+    );
+    
+    var child1 = {
+      p1: seg.p1,
+      p2: midpt,
+      children: []
+    };
+
+    var child2 = {
+      p1: midpt,
+      p2: seg.p2,
+      children: []
+    };
+
+    this.populateSegmentChildren(child1, iterations - 1);
+    this.populateSegmentChildren(child2, iterations - 1);
+
+    seg.children.push(child1);
+    seg.children.push(child2);
+  },
+
+  getPoints: function(seg) {
+    if (seg.children.length === 0) { return [seg.p1]; } // p2 is shared with the next segment
+    var pts = this.getPoints(seg.children[0]);
+    return pts.concat(this.getPoints(seg.children[1]));
   }
+
 }
 // ITEMS ============================================================
 // ** Parent object
@@ -1457,7 +1546,7 @@ window.addEventListener("keydown", function(event) {
   if (input) {
     event.preventDefault();
     input.isDown = 1;
-    if (!(event.which in keys_down) || !keys_down[event.which] && typeof input.onDown === 'function') {
+    if ((!(event.which in keys_down) || !keys_down[event.which]) && typeof input.onDown === 'function') {
       input.onDown();
     }
   }
@@ -1520,6 +1609,7 @@ function go(time) {
   close_people_per_tick = [];
   close_items_per_tick = []; // `crunch
 
+  loop_objects.forEach(function(obj) { obj.skip_tick = false; });
   loop_objects.forEach(resetify);
   loop_objects.forEach(tickity);
   loop_objects.forEach(drawity);
@@ -1687,26 +1777,27 @@ Phaseplot = function(selector, scale, tick, origin_fraction) {
 var pp_drone_xy = new Phaseplot('#phaseplot-drone-xy',
   xy(2, 20),
   function() {
-      this.plotPoint(xy(Player.drone.p_drawn.x, Player.drone.p_drawn.y));
+    this.plotPoint(xy(Player.drone.p_drawn.x, Player.drone.p_drawn.y));
   },
   xy(0, 0)
 );
 var pp_drone_vx = new Phaseplot('#phaseplot-drone-vx',
   xy(2, 40),
   function() {
-      this.plotPoint(xy(Player.drone.p.x, Player.drone.v.x));
+    this.plotPoint(xy(Player.drone.p.x, Player.drone.v.x));
   }
 );
 var pp_drone_vy = new Phaseplot('#phaseplot-drone-vy',
   xy(30, 2),
   function() {
-      this.plotPoint(xy(Player.drone.v.y, Player.drone.p.y));
-  }
+    this.plotPoint(xy(Player.drone.v.y, Player.drone.p.y));
+  },
+  xy(0.5, 0)
 );
 var pp_drone_ay = new Phaseplot('#phaseplot-drone-ay',
   xy(20, 300000),
   function() {
-      this.plotPoint(xy(Player.drone.v.y, Player.drone.getLiftAccel().y + gravAccel().y));
+    this.plotPoint(xy(Player.drone.v.y, Player.drone.getLiftAccel().y + gravAccel().y));
   }
 );
 

@@ -16,6 +16,9 @@ var global = window
 , dist = function(p1, p2) {
     return Math.sqrt(squared(p1.x - p2.x) + squared(p1.y - p2.y));
   }
+, midpoint = function(p1, p2) {
+    return xy(p1.x + (p2.x - p1.x)/2, p1.y + (p2.y - p1.y)/2);
+  }
 , sin = Math.sin
 , cos = Math.cos
 , abs = Math.abs
@@ -62,7 +65,7 @@ var global = window
 
 // other stuff...
 , resetify = function(item) { if (item.reset) item.reset(); }
-, tickity = function(item) { if (item.tick) item.tick(); }
+, tickity = function(item) { if (item.tick && !item.skip_tick) item.tick(); }
 , drawity = function(item) { if (item.draw) item.draw(); }
 
 , null_function = function() {}
