@@ -36,7 +36,7 @@ var Platform = function(origin, xres, xrange, ypoints, thickness) {
   this.pts = this.getPolygon(this.thickness);
 
   this.drawRepr = function(style) {
-    draw.p(ctx, this.pts, style);
+    draw.p(stage.ctx, this.pts, style);
   }
 };
 

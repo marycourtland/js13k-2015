@@ -34,7 +34,14 @@ var global = window
   }
 , probability = function(n) { return rnd() < n; }
 , vec_add = function(p1, p2) {
-    return xy(p1.x + p2.x, p1.y + p2.y)
+    return xy(p1.x + p2.x, p1.y + p2.y);
+  }
+, vec_dot = function(p1, p2) {
+    // `CRUNCH: there's a lot of stuff that could make use of this
+    return xy(p1.x * p2.x, p1.y * p2.y);
+  }
+, scale = function(p, s) {
+    return xy(p.x * s, p.y * s);
   }
 , polar2cart = function(p) {
     return xy(

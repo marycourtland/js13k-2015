@@ -23,7 +23,7 @@ global.onload = function() {
   global.battery1 = new Battery(xy(23, 3));
   global.battery2 = new Battery(xy(28, 3));
 
-  global.building = new Building(50, xy(10, 20));
+  global.building = new Building(50, xy(10, 15));
 
   global.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
   Player.drone.controlFull(p);

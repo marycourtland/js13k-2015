@@ -24,7 +24,8 @@ function Battery(loc) {
     Player.drone.fillEnergy();
   },
 
-  this.drawRepr = function(p, scale, fill) {
+  this.drawRepr = function(p, scale, fill, ctx) {
+    ctx = ctx || stage.ctx;
     var radius = scale * battery_size.x / 2;
     var height = scale * battery_size.y;
 

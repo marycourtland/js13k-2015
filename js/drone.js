@@ -1,6 +1,7 @@
 // THE DRONE =========================================================
 
 var Drone = function(p) {
+  var ctx = stage.ctx;
   this.p = p;
   this.p_drawn = p;
   this.gravity = true;
@@ -159,22 +160,26 @@ var Drone = function(p) {
   // to be more responsive, these methods adjust velocity immediately as well as
   // contributing to acceleration
   this.powerUp = function() {
+    if (this.skip_tick) { return; }
     this.v.y += 0.05;
     this.rpm_scale += dronePowerAccel;
   }
   
   this.powerDown = function() {
+    if (this.skip_tick) { return; }
     this.v.y -= 0.05;
     this.rpm_scale -= dronePowerAccel;
   }
 
   this.tiltLeft = function() {
+    if (this.skip_tick) { return; }
     this.v.x -= 0.1;
     this.rpm_diff -= droneTiltAccel;
     this.tilt = -max_tilt;
   }
 
   this.tiltRight = function() {
+    if (this.skip_tick) { return; }
     this.v.x += 0.1;
     this.rpm_diff += droneTiltAccel;
     this.tilt = max_tilt;
@@ -224,7 +229,6 @@ var Drone = function(p) {
 
   this.attemptControl = function() {
     var person = this.getClosestPerson();
-    console.debug('Control person:', person);
 
     // square the control strength so that it's more limited
     if (person && probability(squared(this.controlStrength()))) {
@@ -246,7 +250,6 @@ var Drone = function(p) {
   }
 
   this.getClosestPerson = function() {
-    console.log('close_people_per_tick:', close_people_per_tick);
     if (close_people_per_tick.length === 0) { return null; }
     return close_people_per_tick.reduce(function(closestPerson, nextPerson) {
       return (nextPerson.drone_distance < closestPerson.drone_distance ? nextPerson : closestPerson);

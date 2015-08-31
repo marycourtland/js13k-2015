@@ -27,8 +27,10 @@ var draw = {
   },
 
   // Clear
-  clr: function(ctx) {
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  clr: function(ctx, p0, p1) {
+    p0 = p0 || xy(0, 0);
+    p1 = p1 || xy(ctx.canvas.width, ctx.canvas.height);
+    ctx.clearRect(p0.x, p0.y, p1.x - p0.x, p1.y - p0.y);
   },
 
   // Fill

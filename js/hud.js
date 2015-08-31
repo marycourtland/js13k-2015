@@ -15,18 +15,18 @@ var Hud = {
 
   displays: {
     energy: function() {
-      var p = vec_add(vec_add(origin, game_size), energy_meter_position);
-      (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color));
+      var p = vec_add(vec_add(overlay.origin, overlay.size), energy_meter_position);
+      (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color), overlay.ctx);
 
       p = vec_add(p, xy(1, 0.1));
 
-      draw.r(ctx,
+      draw.r(overlay.ctx,
         p,
         vec_add(p, energy_meter_size),
         draw.shapeStyle(hud_color_dark)
       );
       
-      draw.r(ctx,
+      draw.r(overlay.ctx,
         p,
         vec_add(p, xy(energy_meter_size.x * Player.drone.energy, energy_meter_size.y)),
         draw.shapeStyle(hud_color)
@@ -39,7 +39,7 @@ var Hud = {
     rpm: function() {
       this.drawDial(
         hud_dial_radius,
-        vec_add(vec_add(origin, game_size), rpm_meter_position),
+        vec_add(vec_add(overlay.origin, overlay.size), rpm_meter_position),
         Player.drone.rpm_scale,
         [0.82, 0.85]
       );
@@ -63,14 +63,14 @@ var Hud = {
     var green_angle1 =  pi * (1 - green_range[0]);
     var green_angle2 =  pi * (1 - green_range[1]);
 
-    draw.a(ctx, p0, r, 0, pi, draw.shapeStyle(hud_color_dark))
-    draw.a(ctx, p0, r * 0.2, 0, pi, draw.shapeStyle(hud_color))
-    draw.a(ctx, p0, r, 0, pi, draw.lineStyle(hud_color, {lineWidth: 0.2}));
-    draw.a(ctx, p0, r, green_angle2, green_angle1, draw.lineStyle(hud_green, {lineWidth: 0.2}));
+    draw.a(overlay.ctx, p0, r, 0, pi, draw.shapeStyle(hud_color_dark))
+    draw.a(overlay.ctx, p0, r * 0.2, 0, pi, draw.shapeStyle(hud_color))
+    draw.a(overlay.ctx, p0, r, 0, pi, draw.lineStyle(hud_color, {lineWidth: 0.2}));
+    draw.a(overlay.ctx, p0, r, green_angle2, green_angle1, draw.lineStyle(hud_green, {lineWidth: 0.2}));
     p0.y += 0.05;
     pe.y += 0.05;
-    draw.l(ctx, p0, pe, basic_style);
-    // draw.l(ctx, p1, p2, basic_style);
+    draw.l(overlay.ctx, p0, pe, basic_style);
+    // draw.l(overlay.ctx, p1, p2, basic_style);
   }
 }
 

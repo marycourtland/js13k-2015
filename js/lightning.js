@@ -37,7 +37,7 @@ lightning = {
     ];
     var pts = this.pts;
     glowdata.forEach(function(data) {
-      draw.p(ctx, pts, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2]}))
+      draw.p(stage.ctx, pts, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2]}))
     })
   },
 
@@ -45,7 +45,7 @@ lightning = {
   // `nb - this is not used anymore! So I guess it's `temp
   regenerate_randomwalk: function() {
     // Pick an origin point in the sky and random walk downwards
-    var x = rnds(game_size.x + origin.x), y = game_size.y;
+    var x = rnds(game_size.x + game_origin.x), y = game_size.y;
     this.pts = [xy(x, y)];
     var p = 0;
     while (y > environment.ground.yAt(x)) {
@@ -62,13 +62,12 @@ lightning = {
     Player.drone.color = '#bbf';
     this.onFinish = function() {
       Player.drone.color = old_drone_color;
-      console.debug('Done');
     }
   },
 
   strike: function(target_pos) {
     if (!target_pos) {
-      var x = rnds(game_size.x + origin.x)
+      var x = rnds(game_size.x + game_origin.x)
       target_pos = environment.ground.pointAt(x);
     }
     var origin_pos = xy(target_pos.x + rnds(-5, 5), game_size.y)

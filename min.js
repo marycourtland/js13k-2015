@@ -34,7 +34,14 @@ var global = window
   }
 , probability = function(n) { return rnd() < n; }
 , vec_add = function(p1, p2) {
-    return xy(p1.x + p2.x, p1.y + p2.y)
+    return xy(p1.x + p2.x, p1.y + p2.y);
+  }
+, vec_dot = function(p1, p2) {
+    // `CRUNCH: there's a lot of stuff that could make use of this
+    return xy(p1.x * p2.x, p1.y * p2.y);
+  }
+, scale = function(p, s) {
+    return xy(p.x * s, p.y * s);
   }
 , polar2cart = function(p) {
     return xy(
@@ -100,8 +107,10 @@ var draw = {
   },
 
   // Clear
-  clr: function(ctx) {
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  clr: function(ctx, p0, p1) {
+    p0 = p0 || xy(0, 0);
+    p1 = p1 || xy(ctx.canvas.width, ctx.canvas.height);
+    ctx.clearRect(p0.x, p0.y, p1.x - p0.x, p1.y - p0.y);
   },
 
   // Fill
@@ -167,7 +176,7 @@ var draw = {
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(15, 15) // pixels -> game units conversion
+var game_scale = xy(18, 18) // pixels -> game units conversion
 ,   game_size = xy((global.innerWidth - 20)/game_scale.x, 30)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
@@ -221,7 +230,7 @@ var game_scale = xy(15, 15) // pixels -> game units conversion
 ,   person_size = xy(0.3, 0.6)
 ,   person_color = '#000'
 ,   person_speed = 0.3
-,   controlled_person_color = '#300'
+,   controlled_person_color = '#000'
 ,   person_control_rate = 0.05 // rate at which control level increases or drops
 ,   min_person_resistance = 2 * person_control_rate
 ,   person_interaction_window = 8
@@ -261,52 +270,68 @@ var game_scale = xy(15, 15) // pixels -> game units conversion
 ;
 // SETUP =============================================================
 
-// `todo: overlay canvas isn't being used right now. Use it for hud etc.
 
-var canvas = $("#game_canvas"),
-    ctx = canvas.getContext('2d'),
-    origin = xy(0, 0)
-;
+function Layer(selector, size, scale) {
+  this.canvas = $(selector);
+  this.ctx = this.canvas.getContext('2d');
+  this.canvas.setAttribute("width", size.x * scale.x);
+  this.canvas.setAttribute("height", size.y * scale.y);
 
-var overlay = $("#game_overlay"),
-    overlay_ctx = overlay.getContext('2d');
+  this.origin = xy(0, 0);
+  this.size = size;
+  this.scale = scale;
 
+  // x/y grid, origin at lower left corner. Positive is up and rightwards
+  // note: it will move left/right as the player moves camera
+  this.ctx.setTransform(scale.x, 0, 0, -scale.y, 0, size.y * scale.y);
+  this.ctx.lineWidth = 0;
 
-$("#game-layers").style.height = (game_size.y * game_scale.y) + "px";
+  this.clear = function() {
+    draw.clr(this.ctx, this.origin, xy(this.origin.x + this.size.x, this.origin.y + this.size.y));
+  }
 
-[canvas, overlay].forEach(function(c) {
-  c.setAttribute("width", game_size.x * game_scale.x);
-  c.setAttribute("height", game_size.y * game_scale.y);
-});
+  this.moveBy = function(p) {
+    p = this.transCoords(p);
+    this.ctx.translate(-p.x, -p.y);
+    this.origin = vec_add(this.origin, p);
+  }
 
-// x/y grid, origin at lower left corner. Positive is up and rightwards
-// note: it will move left/right as the player moves camera
-[ctx, overlay_ctx].forEach(function(context) {
-  context.setTransform(game_scale.x, 0, 0, -game_scale.y, 0, game_size.y * game_scale.y);
-  context.lineWidth = 0;
-})
+  // Translate from global game units into this layer's units
+  this.transCoords = function(p) {
+    return xy(
+      p.x * this.scale.x / game_scale.x,
+      p.y * this.scale.y / game_scale.y
+    );
+  }
+}
 
-
-// CAMERA ============================================================
 
 var Camera = {
   tick: function() {
     this.focusOnPlayerDrone();
   },
 
-  moveBy: function(xy) {
-    ctx.translate(-xy.x, -xy.y);
-    origin.x += xy.x;
-    origin.y += xy.y;
+  moveBy: function(p) {
+    game_origin = vec_add(game_origin, p);
+    global.bg.moveBy(p);
+    global.stage.moveBy(p);
   },
 
   focusOnPlayerDrone: function() {
-    var dx = Player.drone.p.x - origin.x, dy = Player.drone.p.y - origin.y;
+    var dx = Player.drone.p.x - game_origin.x, dy = Player.drone.p.y - game_origin.y;
     if (dx < camera_margin.x) { this.moveBy(xy(dx - camera_margin.x, 0)); }
     if ((game_size.x - dx) < camera_margin.x) { this.moveBy(xy(camera_margin.x - (game_size.x - dx), 0)); }
-
   }
 }
+
+global.game_origin = xy(0, 0);
+
+global.bg = new Layer("#game_background", scale(game_size, 1/0.95), scale(game_scale, 0.95));
+global.stage = new Layer("#game_stage", game_size, game_scale);
+global.overlay = new Layer("#game_overlay", game_size, game_scale);
+
+// this is the container for all the layers
+$("#game-layers").style.height = (game_size.y * game_scale.y) + "px";
 
 // `crunch: that constructor is a mess, ha!
 
@@ -346,7 +371,7 @@ var Platform = function(origin, xres, xrange, ypoints, thickness) {
   this.pts = this.getPolygon(this.thickness);
 
   this.drawRepr = function(style) {
-    draw.p(ctx, this.pts, style);
+    draw.p(stage.ctx, this.pts, style);
   }
 };
 
@@ -399,14 +424,13 @@ Building.prototype = {
 
   draw: function() {
     this.platforms[0].drawRepr(draw.shapeStyle(building_color));
-    draw.r(ctx, this.door_p, vec_add(this.door_p, door_size), draw.shapeStyle(door_color));
+    draw.r(stage.ctx, this.door_p, vec_add(this.door_p, door_size), draw.shapeStyle(door_color));
   },
 
   setupPlatform: function(platform) {
     this.platforms.push(platform);
     // `todo: a way for people to access the platform
   },
-
 
   personEnter: function(person) {
     person.hidden = true;
@@ -440,11 +464,11 @@ var environment = {
   reset: function() {
     // Background
     // (even though this is drawing-related, it needs to come before anything else)
-    var grd = ctx.createLinearGradient(0, 0, 0, game_size.y * 1.2);
+    var grd = bg.ctx.createLinearGradient(0, 0, 0, bg.size.y * 1.2);
     backgroundGradient.forEach(function(params) {
       grd.addColorStop.apply(grd, params);
     })
-    draw.r(ctx, origin, xy(origin.x + game_size.x, origin.y + game_size.y), draw.shapeStyle(grd));
+    draw.r(bg.ctx, bg.origin, xy(bg.origin.x + bg.size.x, bg.origin.y + bg.size.y), draw.shapeStyle(grd));
 
     // Draw towers (decorative only for now)
     // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
@@ -452,12 +476,14 @@ var environment = {
       var x1 = tower.x - tower.w/2;
       var x2 = tower.x + tower.w/2;
       var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
-      draw.r(ctx,
+      draw.r(bg.ctx,
         xy(x1, y0 - 0.5),
         xy(x2, y0 + tower.h),
         draw.shapeStyle(tower_color)
       )
-    })
+    });
+
+    stage.clear();
   },
 
 
@@ -466,7 +492,7 @@ var environment = {
   draw: function() {
     // Ground
     var fill = draw.shapeStyle(environment_color);
-    draw.p(ctx, this.pts, fill);
+    draw.p(stage.ctx, this.pts, fill);
   },
 
   generate: function() {
@@ -603,6 +629,7 @@ function Actor(p) {
 // PEOPLE ============================================================
 
 function Person() {
+  var ctx = stage.ctx;
   this.p = xy(0, 0);
   this.color = person_color;
   this.drone_distance = null; // only relevant when person is within the interaction window
@@ -924,14 +951,14 @@ function Role(options) {
 var roles = {
   normal: new Role({
     draw: function() {
-      this.drawSash('green');
+      this.drawSash('#7ca');
     }
   }),
 
   game_target: new Role({
     draw: function() {
       this.drawTopHat(person_color);
-      this.drawSash('red');
+      this.drawSash('#78c');
     },
 
     onControl: function() {
@@ -942,6 +969,7 @@ var roles = {
 // THE DRONE =========================================================
 
 var Drone = function(p) {
+  var ctx = stage.ctx;
   this.p = p;
   this.p_drawn = p;
   this.gravity = true;
@@ -1100,22 +1128,26 @@ var Drone = function(p) {
   // to be more responsive, these methods adjust velocity immediately as well as
   // contributing to acceleration
   this.powerUp = function() {
+    if (this.skip_tick) { return; }
     this.v.y += 0.05;
     this.rpm_scale += dronePowerAccel;
   }
   
   this.powerDown = function() {
+    if (this.skip_tick) { return; }
     this.v.y -= 0.05;
     this.rpm_scale -= dronePowerAccel;
   }
 
   this.tiltLeft = function() {
+    if (this.skip_tick) { return; }
     this.v.x -= 0.1;
     this.rpm_diff -= droneTiltAccel;
     this.tilt = -max_tilt;
   }
 
   this.tiltRight = function() {
+    if (this.skip_tick) { return; }
     this.v.x += 0.1;
     this.rpm_diff += droneTiltAccel;
     this.tilt = max_tilt;
@@ -1165,7 +1197,6 @@ var Drone = function(p) {
 
   this.attemptControl = function() {
     var person = this.getClosestPerson();
-    console.debug('Control person:', person);
 
     // square the control strength so that it's more limited
     if (person && probability(squared(this.controlStrength()))) {
@@ -1187,7 +1218,6 @@ var Drone = function(p) {
   }
 
   this.getClosestPerson = function() {
-    console.log('close_people_per_tick:', close_people_per_tick);
     if (close_people_per_tick.length === 0) { return null; }
     return close_people_per_tick.reduce(function(closestPerson, nextPerson) {
       return (nextPerson.drone_distance < closestPerson.drone_distance ? nextPerson : closestPerson);
@@ -1284,7 +1314,7 @@ lightning = {
     ];
     var pts = this.pts;
     glowdata.forEach(function(data) {
-      draw.p(ctx, pts, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2]}))
+      draw.p(stage.ctx, pts, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2]}))
     })
   },
 
@@ -1292,7 +1322,7 @@ lightning = {
   // `nb - this is not used anymore! So I guess it's `temp
   regenerate_randomwalk: function() {
     // Pick an origin point in the sky and random walk downwards
-    var x = rnds(game_size.x + origin.x), y = game_size.y;
+    var x = rnds(game_size.x + game_origin.x), y = game_size.y;
     this.pts = [xy(x, y)];
     var p = 0;
     while (y > environment.ground.yAt(x)) {
@@ -1309,13 +1339,12 @@ lightning = {
     Player.drone.color = '#bbf';
     this.onFinish = function() {
       Player.drone.color = old_drone_color;
-      console.debug('Done');
     }
   },
 
   strike: function(target_pos) {
     if (!target_pos) {
-      var x = rnds(game_size.x + origin.x)
+      var x = rnds(game_size.x + game_origin.x)
       target_pos = environment.ground.pointAt(x);
     }
     var origin_pos = xy(target_pos.x + rnds(-5, 5), game_size.y)
@@ -1433,7 +1462,8 @@ function Battery(loc) {
     Player.drone.fillEnergy();
   },
 
-  this.drawRepr = function(p, scale, fill) {
+  this.drawRepr = function(p, scale, fill, ctx) {
+    ctx = ctx || stage.ctx;
     var radius = scale * battery_size.x / 2;
     var height = scale * battery_size.y;
 
@@ -1475,18 +1505,18 @@ var Hud = {
 
   displays: {
     energy: function() {
-      var p = vec_add(vec_add(origin, game_size), energy_meter_position);
-      (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color));
+      var p = vec_add(vec_add(overlay.origin, overlay.size), energy_meter_position);
+      (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color), overlay.ctx);
 
       p = vec_add(p, xy(1, 0.1));
 
-      draw.r(ctx,
+      draw.r(overlay.ctx,
         p,
         vec_add(p, energy_meter_size),
         draw.shapeStyle(hud_color_dark)
       );
       
-      draw.r(ctx,
+      draw.r(overlay.ctx,
         p,
         vec_add(p, xy(energy_meter_size.x * Player.drone.energy, energy_meter_size.y)),
         draw.shapeStyle(hud_color)
@@ -1499,7 +1529,7 @@ var Hud = {
     rpm: function() {
       this.drawDial(
         hud_dial_radius,
-        vec_add(vec_add(origin, game_size), rpm_meter_position),
+        vec_add(vec_add(overlay.origin, overlay.size), rpm_meter_position),
         Player.drone.rpm_scale,
         [0.82, 0.85]
       );
@@ -1523,14 +1553,14 @@ var Hud = {
     var green_angle1 =  pi * (1 - green_range[0]);
     var green_angle2 =  pi * (1 - green_range[1]);
 
-    draw.a(ctx, p0, r, 0, pi, draw.shapeStyle(hud_color_dark))
-    draw.a(ctx, p0, r * 0.2, 0, pi, draw.shapeStyle(hud_color))
-    draw.a(ctx, p0, r, 0, pi, draw.lineStyle(hud_color, {lineWidth: 0.2}));
-    draw.a(ctx, p0, r, green_angle2, green_angle1, draw.lineStyle(hud_green, {lineWidth: 0.2}));
+    draw.a(overlay.ctx, p0, r, 0, pi, draw.shapeStyle(hud_color_dark))
+    draw.a(overlay.ctx, p0, r * 0.2, 0, pi, draw.shapeStyle(hud_color))
+    draw.a(overlay.ctx, p0, r, 0, pi, draw.lineStyle(hud_color, {lineWidth: 0.2}));
+    draw.a(overlay.ctx, p0, r, green_angle2, green_angle1, draw.lineStyle(hud_green, {lineWidth: 0.2}));
     p0.y += 0.05;
     pe.y += 0.05;
-    draw.l(ctx, p0, pe, basic_style);
-    // draw.l(ctx, p1, p2, basic_style);
+    draw.l(overlay.ctx, p0, pe, basic_style);
+    // draw.l(overlay.ctx, p1, p2, basic_style);
   }
 }
 
@@ -1693,7 +1723,7 @@ global.onload = function() {
   global.battery1 = new Battery(xy(23, 3));
   global.battery2 = new Battery(xy(28, 3));
 
-  global.building = new Building(50, xy(10, 20));
+  global.building = new Building(50, xy(10, 15));
 
   global.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
   Player.drone.controlFull(p);

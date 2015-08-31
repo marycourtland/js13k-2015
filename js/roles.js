@@ -14,14 +14,14 @@ function Role(options) {
 var roles = {
   normal: new Role({
     draw: function() {
-      this.drawSash('green');
+      this.drawSash('#7ca');
     }
   }),
 
   game_target: new Role({
     draw: function() {
       this.drawTopHat(person_color);
-      this.drawSash('red');
+      this.drawSash('#78c');
     },
 
     onControl: function() {
