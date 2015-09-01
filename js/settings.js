@@ -50,6 +50,7 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
 ,   lightning_chance_drone = 0.3   // Of each lightning strike, chance that it will hit the drone
+,   lightning_integrity_decrease = 0.3 // OUCH!
 
 // People
 ,   person_size = xy(0.3, 0.6)
@@ -73,6 +74,14 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 ,   drone_high_energy = 0.9
 ,   drone_max_sideways_accel = 0.01
 
+// Bullets
+,   bullet_radius = 0.075
+,   bullet_hit_distance = 0.5
+,   bullet_speed = 1.8
+,   bullet_color = '#eee'
+,   bullet_frequency = 50 // frames between a guard's bullets
+,   bullet_integrity_decrease = 0.05 // how much structural integrity does a bullet disrupt?
+
 // Items
 ,   battery_size = {x: 0.5, y: 0.3}
 ,   battery_color = "#000"
@@ -88,8 +97,9 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 ,   hud_red = '#811'
 ,   hud_green = '#161'
 ,   hud_dial_radius = 1
+,   bar_meter_size = xy(4, 0.5)
 ,   energy_meter_position = xy(-12, -1.5)
-,   energy_meter_size = xy(4, 0.5)
+,   integrity_meter_position = xy(-20, -1.5)
 ,   rpm_meter_position = xy(-3, -1.5)
 
 ;

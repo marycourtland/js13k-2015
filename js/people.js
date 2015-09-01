@@ -116,6 +116,7 @@ function Person() {
       this.control_level -= person_control_rate;
       this.control_level = max(this.control_level, 0);
     }
+    this.byRole('tick');
   }
 
   this.draw = function() {
@@ -127,7 +128,7 @@ function Person() {
 
     if (this.talking_dir !== 0) {
       this.drawSpeechSquiggles(this.talking_dir);
-      this.talking_idea.drawRepr(vec_add(this.p, xy(this.talking_dir * 0.5, 1.2)), idea_scale, draw.shapeStyle(idea_color));
+      this.talking_idea.drawRepr(vec_add(this.p, xy(this.talking_dir * 0.5, 1.2)), idea_scale, draw.shapeStyle(idea_color), {freeze: true});
     }
 
     this.byRole('draw');
@@ -171,13 +172,14 @@ function Person() {
     );
   }
 
-  this.drawSash = function(color) {
+  this.drawSash = function(color, dir) {
+    dir = dir || 1;
     var ps = person_size;
     draw.p(ctx, [
-        vec_add(this.p, xy(-ps.x/2, 0)),
-        vec_add(this.p, xy(-ps.x/2, ps.x/2)),
-        vec_add(this.p, xy(ps.x/2, ps.y-ps.x/4)),
-        vec_add(this.p, xy(ps.x/2, ps.y-3*ps.x/4))
+        vec_add(this.p, xy(-dir * ps.x/2, 0)),
+        vec_add(this.p, xy(-dir * ps.x/2, ps.x/4)),
+        vec_add(this.p, xy(dir * ps.x/2, ps.y-ps.x/4)),
+        vec_add(this.p, xy(dir * ps.x/2, ps.y-ps.x/2))
       ],
       draw.shapeStyle(color)
     )
@@ -281,6 +283,13 @@ function Person() {
         return;
       }
     })
+  }
+
+  // shooting
+  this.shoot = function(at_pos) {
+    var p = vec_add(this.p, xy(0, person_size.y * 0.7));
+    var dir = Math.atan2(at_pos.y - p.y, at_pos.x - p.x);
+    addToLoop('foreground2', new Bullet(p, dir))
   }
 
 

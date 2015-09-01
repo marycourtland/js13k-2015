@@ -14,7 +14,7 @@ global.onload = function() {
   // `temp sample people/items
   global.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0)});
   global.p2 = (new Person()).init({p: xy(18, 3)});
-  global.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
+  global.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0), role: roles.guard});
   
 
   // Game target: if you overpower this one, you win

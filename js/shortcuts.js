@@ -1,3 +1,4 @@
+// `crunch: audit these for unused or underused functions
 
 // HTML ==============================================================
 var global = window
@@ -69,6 +70,9 @@ var global = window
 , bounds = function(x, bounds) {
     return max(min(x, max.apply(null, bounds)), min.apply(null, bounds));
   }
+, vcopy = function(p) {
+  return xy(p.x, p.y);
+}
 
 // other stuff...
 , resetify = function(item) { if (item.reset) item.reset(); }

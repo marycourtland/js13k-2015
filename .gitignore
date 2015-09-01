@@ -1,1 +1,7 @@
-screenshots/.
+*.sublime-project
+*.sublime-workspace
+node_modules/*
+minified/*
+*.zip
+build_output.js
+screenshots/*

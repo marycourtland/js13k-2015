@@ -1,4 +1,5 @@
-(function() {
+(function() {// `crunch: audit these for unused or underused functions
+
 // HTML ==============================================================
 var global = window
 , doc = document
@@ -69,6 +70,9 @@ var global = window
 , bounds = function(x, bounds) {
     return max(min(x, max.apply(null, bounds)), min.apply(null, bounds));
   }
+, vcopy = function(p) {
+  return xy(p.x, p.y);
+}
 
 // other stuff...
 , resetify = function(item) { if (item.reset) item.reset(); }
@@ -225,6 +229,7 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 // Lightning
 ,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
 ,   lightning_chance_drone = 0.3   // Of each lightning strike, chance that it will hit the drone
+,   lightning_integrity_decrease = 0.3 // OUCH!
 
 // People
 ,   person_size = xy(0.3, 0.6)
@@ -248,6 +253,14 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 ,   drone_high_energy = 0.9
 ,   drone_max_sideways_accel = 0.01
 
+// Bullets
+,   bullet_radius = 0.075
+,   bullet_hit_distance = 0.5
+,   bullet_speed = 1.8
+,   bullet_color = '#eee'
+,   bullet_frequency = 50 // frames between a guard's bullets
+,   bullet_integrity_decrease = 0.05 // how much structural integrity does a bullet disrupt?
+
 // Items
 ,   battery_size = {x: 0.5, y: 0.3}
 ,   battery_color = "#000"
@@ -263,8 +276,9 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 ,   hud_red = '#811'
 ,   hud_green = '#161'
 ,   hud_dial_radius = 1
+,   bar_meter_size = xy(4, 0.5)
 ,   energy_meter_position = xy(-12, -1.5)
-,   energy_meter_size = xy(4, 0.5)
+,   integrity_meter_position = xy(-20, -1.5)
 ,   rpm_meter_position = xy(-3, -1.5)
 
 ;
@@ -744,6 +758,7 @@ function Person() {
       this.control_level -= person_control_rate;
       this.control_level = max(this.control_level, 0);
     }
+    this.byRole('tick');
   }
 
   this.draw = function() {
@@ -755,7 +770,7 @@ function Person() {
 
     if (this.talking_dir !== 0) {
       this.drawSpeechSquiggles(this.talking_dir);
-      this.talking_idea.drawRepr(vec_add(this.p, xy(this.talking_dir * 0.5, 1.2)), idea_scale, draw.shapeStyle(idea_color));
+      this.talking_idea.drawRepr(vec_add(this.p, xy(this.talking_dir * 0.5, 1.2)), idea_scale, draw.shapeStyle(idea_color), {freeze: true});
     }
 
     this.byRole('draw');
@@ -799,13 +814,14 @@ function Person() {
     );
   }
 
-  this.drawSash = function(color) {
+  this.drawSash = function(color, dir) {
+    dir = dir || 1;
     var ps = person_size;
     draw.p(ctx, [
-        vec_add(this.p, xy(-ps.x/2, 0)),
-        vec_add(this.p, xy(-ps.x/2, ps.x/2)),
-        vec_add(this.p, xy(ps.x/2, ps.y-ps.x/4)),
-        vec_add(this.p, xy(ps.x/2, ps.y-3*ps.x/4))
+        vec_add(this.p, xy(-dir * ps.x/2, 0)),
+        vec_add(this.p, xy(-dir * ps.x/2, ps.x/4)),
+        vec_add(this.p, xy(dir * ps.x/2, ps.y-ps.x/4)),
+        vec_add(this.p, xy(dir * ps.x/2, ps.y-ps.x/2))
       ],
       draw.shapeStyle(color)
     )
@@ -911,6 +927,13 @@ function Person() {
     })
   }
 
+  // shooting
+  this.shoot = function(at_pos) {
+    var p = vec_add(this.p, xy(0, person_size.y * 0.7));
+    var dir = Math.atan2(at_pos.y - p.y, at_pos.x - p.x);
+    addToLoop('foreground2', new Bullet(p, dir))
+  }
+
 
   // Ideas ======================================================
 
@@ -946,12 +969,24 @@ Person.prototype = new Actor();
 function Role(options) {
   this.draw = options.draw || null_function;
   this.onControl = options.onControl || null_function;
+  this.tick = options.tick || null_function;
 };
 
 var roles = {
   normal: new Role({
     draw: function() {
       this.drawSash('#7ca');
+    }
+  }),
+
+  guard: new Role({
+    tick: function() {
+      if (gameplay_frame % bullet_frequency === 0) { this.shoot(Player.drone.p_drawn); }
+    },
+
+    draw: function() {
+      this.drawSash('#a21', -1);
+      this.drawSash('#a21', 1); // `crunch
     }
   }),
 
@@ -974,6 +1009,7 @@ var Drone = function(p) {
   this.p_drawn = p;
   this.gravity = true;
   this.energy = 1; // goes from 0 to 1
+  this.integrity = 1; // goes from 0 to 1. Basically health
   this.powered = true;
   this.rpm_scale = 0.83;
   this.control_t0 = 0;
@@ -989,7 +1025,18 @@ var Drone = function(p) {
 
   this.person = null,
 
+  this.boundify = function() {
+    // Make sure each property is in its proper bounds
+    this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
+    this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
+    this.tilt = bounds(this.tilt, [-pi/2, pi/2]);
+    this.energy = bounds(this.energy, [0, 1]);
+    this.integrity = bounds(this.integrity, [0, 1]);
+  }
+
   this.reset = function() {
+    this.boundify();
+
     // compute position offset
     this.offset = 0;
     for (var frame in this.offsets) {
@@ -1012,30 +1059,23 @@ var Drone = function(p) {
     // acceleration given by copter blades
     this.v = vec_add(this.v, this.getLiftAccel());
 
-    // decay the tilt
-    this.tilt *= 0.9;
+    // Dynamics
+    this.tilt *= 0.9; // decay the tilt
 
-    // introduce a good bit of sideways drag
-    this.v.x *= 0.95;
+    this.v.x *= 0.95; // sideways drag
     this.rpm_diff += (this.rpm_diff > 0 ? -0.003 : 0.003);
 
-    //this will take care of gravity
-    this.__proto__.tick.apply(this);
-
-    this.energy = max(this.energy - this.getEnergyDrain(), 0);
-
-    if (this.energy == 0) {
-      this.die();
-    }
+    this.__proto__.tick.apply(this); // this takes care of gravity + velocity application
 
     // The drone's *actual* drawn position is offset a bit
     // this is for better aerodynamic fakery
     this.p_drawn = xy(this.p.x, this.p.y + this.offset);
 
+    // Stats
+    this.drainEnergy();
+    this.checkStats();
 
-    this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
-    this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
-    this.tilt = bounds(this.tilt, [-pi/2, pi/2]);
+    this.boundify();
   }
 
   this.draw = function() { 
@@ -1050,14 +1090,17 @@ var Drone = function(p) {
     }
 
     // The drone itself
-    this.drawRepr(this.p_drawn, 1, draw.shapeStyle(this.color), this.tilt);
+    this.drawRepr(this.p_drawn, 1, draw.shapeStyle(this.color), {tilt:this.tilt});
   }
 
-  this.drawRepr = function(p, scale, fill, tilt) {
+  this.drawRepr = function(p, scale, fill, params) {
     // `CRUNCH: This whole method
-    tilt = tilt || 0;
-    ctx.translate(p.x, p.y);
-    ctx.rotate(-tilt);
+    params = params || {};
+    var tilt = params.tilt || 0;
+    var _ctx = params.ctx || ctx;
+
+    _ctx.translate(p.x, p.y);
+    _ctx.rotate(-tilt);
 
     var strk = draw.lineStyle(fill.fillStyle, {lineWidth: scale * drone_arm_size.y});
 
@@ -1071,29 +1114,41 @@ var Drone = function(p) {
     var blade_y = scale * drone_blade_size.y/2;
 
     // body
-    draw.r(ctx,
+    draw.r(_ctx,
       // `crunch
-      xy(- width, - height),
-      xy(+ width, + height),
+      xy(-width, -height),
+      xy(+width, +height),
       fill
     );
 
     // arms
-    draw.l(ctx,
-      xy(- arm_x, + height + arm_y),
-      xy(+ arm_x, + height + arm_y),
+    draw.l(_ctx,
+      xy(-arm_x, +height + arm_y),
+      xy(+arm_x, +height + arm_y),
       strk
-    )
+    );
+
+    // legs (`crunch)
+    draw.l(_ctx,
+      xy(-arm_x*0.5, +height + arm_y),
+      xy(-2.2 * width, -1.8 * height),
+      strk
+    );
+    draw.l(_ctx,
+      xy(+arm_x*0.5, +height + arm_y),
+      xy(2.2 * width, -1.8 * height),
+      strk
+    );
 
     // copter blades above arms
     function drawBlade(xpos, xscale) {
       // `crunch
-      draw.r(ctx,
+      draw.r(_ctx,
         xy(xpos - xscale * blade_x, height + arm_y*2 + 0.05),
         xy(xpos + xscale * blade_x, height + arm_y*2 + 0.05 + blade_y*2),
         fill
       );
-      draw.l(ctx,
+      draw.l(_ctx,
         xy(xpos, height + arm_y),
         xy(xpos, height + arm_y*2 + 0.1),
         strk
@@ -1101,18 +1156,28 @@ var Drone = function(p) {
     }
 
     var f = 0.8;
-    var blade_phase = (this.powered && (typeof this.rpm_scale !== 'undefined')) ? this.rpm_scale * gameplay_frame : 0.8;
+    var blade_phase = (this.powered && (typeof this.rpm_scale !== 'undefined') && !params.freeze) ? this.rpm_scale * gameplay_frame : 0.8;
     drawBlade(scale * drone_arm_size.x - 0.05, sin(f * blade_phase));
     drawBlade(-scale * drone_arm_size.x + 0.05, sin(f * blade_phase));
 
-    ctx.rotate(tilt);
-    ctx.translate(-p.x, -p.y);
+    _ctx.rotate(tilt);
+    _ctx.translate(-p.x, -p.y);
   }
 
-  this.die = function() {
+  this.checkStats = function() {
+    // `crunch: the 'refresh to play again' can be consolidated
+    if (this.energy <= 0) {
+      this.die('Your battery is drained. Refresh to play again.');
+    }
+    else if (this.integrity <= 0) {
+      this.die('Structural integrity failure. Refresh to play again.')
+    }
+  }
+
+  this.die = function(reason) {
       this.powered = false;
       this.rpm_scale = 0;
-      notify('Your battery is drained. Refresh to play again.')
+      notify(reason || 'You have died... for no reason. Refresh to play again.')
   }
   
   // Fake aerodynamics! ========================================================
@@ -1225,16 +1290,20 @@ var Drone = function(p) {
   }
 
 
-  // Energy related ========================================================
+  // Stats related ========================================================
 
   this.fillEnergy = function() {
     this.energy = 1;
   }
 
-  this.getEnergyDrain = function() {
+  this.drainEnergy = function() {
     // per frame
     // this combines all the possible factors which contribute to energy drain;
-    return drone_drain_rate * this.rpm_scale;
+    this.energy -= drone_drain_rate * this.rpm_scale;
+  }
+
+  this.dockIntegrity = function(amount) {
+    this.integrity -= amount;
   }
 
 }
@@ -1339,6 +1408,7 @@ lightning = {
     Player.drone.color = '#bbf';
     this.onFinish = function() {
       Player.drone.color = old_drone_color;
+      Player.drone.dockIntegrity(lightning_integrity_decrease);
     }
   },
 
@@ -1436,6 +1506,32 @@ function Item(loc) {
   }
 }
 
+var Bullet = function(p, dir) {
+  this.p = p;
+  this.v = polar2cart(rth(bullet_speed, dir));
+
+  this.tick = function() {
+    this.__proto__.tick.apply(this);
+    if (dist(this.p, Player.drone.p_drawn) < bullet_hit_distance) { this.onHit(); }
+    if (this.p.y < 0 || this.p.y > game_size.y) {
+      loopDestroy(this);
+    }
+  }
+
+  this.draw = function() {
+    draw.c(stage.ctx, this.p, bullet_radius, draw.shapeStyle(bullet_color));
+  }
+
+  this.onHit = function() {
+    loopDestroy(this);
+    Player.drone.dockIntegrity(bullet_integrity_decrease);
+    // `todo: show feedback - drone color change, integrity health bar color change
+  }
+}
+
+Bullet.prototype = new Actor();
+
+
 // BATTERIES ============================================================
 
 function Battery(loc) {
@@ -1512,18 +1608,40 @@ var Hud = {
 
       draw.r(overlay.ctx,
         p,
-        vec_add(p, energy_meter_size),
+        vec_add(p, bar_meter_size),
         draw.shapeStyle(hud_color_dark)
       );
       
       draw.r(overlay.ctx,
         p,
-        vec_add(p, xy(energy_meter_size.x * Player.drone.energy, energy_meter_size.y)),
+        vec_add(p, xy(bar_meter_size.x * Player.drone.energy, bar_meter_size.y)),
         draw.shapeStyle(hud_color)
       );
 
       // `todo: include a percentage next to the bar
 
+    },
+
+    integrity: function() {
+      // `CRUNCH: this is essentially same as the energy meter. Just the icon adjustment is off a bit
+      var p = vec_add(vec_add(overlay.origin, overlay.size), integrity_meter_position);
+      Player.drone.drawRepr(vec_add(p, xy(0, 0.3)), 2, draw.shapeStyle(hud_color), {ctx: overlay.ctx});
+
+      p = vec_add(p, xy(1.5, 0.1));
+
+      draw.r(overlay.ctx,
+        p,
+        vec_add(p, bar_meter_size),
+        draw.shapeStyle(hud_color_dark)
+      );
+      
+      draw.r(overlay.ctx,
+        p,
+        vec_add(p, xy(bar_meter_size.x * Player.drone.integrity, bar_meter_size.y)),
+        draw.shapeStyle(hud_color)
+      );
+
+      // `todo: include a percentage next to the bar
     },
 
     rpm: function() {
@@ -1609,7 +1727,7 @@ var gameplay_time = 0;
 var gameplay_fps = 0;
 var avg_fps = 0;
 
-var debug_period = 50000; // `temp
+var debug_period = 500; // `temp
 
 // The drone code will only interact with these people (for slightly more efficent operation)
 var close_people_per_tick = [];
@@ -1659,9 +1777,8 @@ function go(time) {
 }
 
 function loopDestroy(obj) {
-  console.log('Destroyng:', obj);
-    delete obj.tick;
-    delete obj.draw;
+  delete obj.tick;
+  delete obj.draw;
 }
 
 function addToLoop(group, objs) {
@@ -1669,16 +1786,19 @@ function addToLoop(group, objs) {
   objs.forEach(function(obj) {
     global.object_groups[group].push(obj);
   })
+  if (gameplay_on) { refreshLoopObjects(); }
 }
 
-function startGame() {
+function refreshLoopObjects() {
   // Flatten loop objects
   global.loop_objects = object_groups.background
     .concat(object_groups.foreground1)
     .concat(object_groups.foreground2)
     .concat(object_groups.overlay);
+}
 
-
+function startGame() {
+  refreshLoopObjects();
   gameplay_on = true;
   reqAnimFrame(go);
 }
@@ -1714,7 +1834,7 @@ global.onload = function() {
   // `temp sample people/items
   global.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0)});
   global.p2 = (new Person()).init({p: xy(18, 3)});
-  global.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
+  global.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0), role: roles.guard});
   
 
   // Game target: if you overpower this one, you win

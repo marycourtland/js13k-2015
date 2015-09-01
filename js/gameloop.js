@@ -15,7 +15,7 @@ var gameplay_time = 0;
 var gameplay_fps = 0;
 var avg_fps = 0;
 
-var debug_period = 50000; // `temp
+var debug_period = 500; // `temp
 
 // The drone code will only interact with these people (for slightly more efficent operation)
 var close_people_per_tick = [];
@@ -65,9 +65,8 @@ function go(time) {
 }
 
 function loopDestroy(obj) {
-  console.log('Destroyng:', obj);
-    delete obj.tick;
-    delete obj.draw;
+  delete obj.tick;
+  delete obj.draw;
 }
 
 function addToLoop(group, objs) {
@@ -75,16 +74,19 @@ function addToLoop(group, objs) {
   objs.forEach(function(obj) {
     global.object_groups[group].push(obj);
   })
+  if (gameplay_on) { refreshLoopObjects(); }
 }
 
-function startGame() {
+function refreshLoopObjects() {
   // Flatten loop objects
   global.loop_objects = object_groups.background
     .concat(object_groups.foreground1)
     .concat(object_groups.foreground2)
     .concat(object_groups.overlay);
+}
 
-
+function startGame() {
+  refreshLoopObjects();
   gameplay_on = true;
   reqAnimFrame(go);
 }

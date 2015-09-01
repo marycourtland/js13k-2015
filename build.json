@@ -15,6 +15,7 @@
     "js/player.js",
     "js/lightning.js",
     "js/items.js",
+    "js/bullets.js",
     "js/batteries.js",
     "js/hud.js",
     "js/events.js",
