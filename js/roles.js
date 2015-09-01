@@ -21,7 +21,9 @@ var roles = {
 
   guard: new Role({
     tick: function() {
-      if (gameplay_frame % bullet_frequency === 0) { this.shoot(Player.drone.p_drawn); }
+      if ( gameplay_frame % bullet_frequency === 0) {
+        this.shoot(Player.drone.p_drawn);
+      }
     },
 
     draw: function() {

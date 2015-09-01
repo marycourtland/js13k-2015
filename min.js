@@ -238,8 +238,9 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 ,   controlled_person_color = '#000'
 ,   person_control_rate = 0.05 // rate at which control level increases or drops
 ,   min_person_resistance = 2 * person_control_rate
-,   person_interaction_window = 8
+,   person_interaction_window = 15
 ,   interaction_distance = 1
+,   shoot_drone_window = 15
 
 
 // Drone
@@ -744,6 +745,7 @@ function Person() {
   this.reset = function() {
     this.talking_dir = 0;
 
+    this.drone_distance = null;
     if (abs(Player.drone.p.x - this.p.x) < person_interaction_window) {
       close_people_per_tick.push(this);
       this.drone_distance = dist(this.p, Player.drone.p);
@@ -929,6 +931,9 @@ function Person() {
 
   // shooting
   this.shoot = function(at_pos) {
+    if (this.drone_distance === null || this.drone_distance > shoot_drone_window) { return; }
+    if (this.control_level >= 1) { return; }
+
     var p = vec_add(this.p, xy(0, person_size.y * 0.7));
     var dir = Math.atan2(at_pos.y - p.y, at_pos.x - p.x);
     addToLoop('foreground2', new Bullet(p, dir))
@@ -981,7 +986,9 @@ var roles = {
 
   guard: new Role({
     tick: function() {
-      if (gameplay_frame % bullet_frequency === 0) { this.shoot(Player.drone.p_drawn); }
+      if ( gameplay_frame % bullet_frequency === 0) {
+        this.shoot(Player.drone.p_drawn);
+      }
     },
 
     draw: function() {

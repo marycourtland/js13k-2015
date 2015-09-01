@@ -59,8 +59,9 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 ,   controlled_person_color = '#000'
 ,   person_control_rate = 0.05 // rate at which control level increases or drops
 ,   min_person_resistance = 2 * person_control_rate
-,   person_interaction_window = 8
+,   person_interaction_window = 15
 ,   interaction_distance = 1
+,   shoot_drone_window = 15
 
 
 // Drone

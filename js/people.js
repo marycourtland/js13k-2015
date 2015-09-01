@@ -102,6 +102,7 @@ function Person() {
   this.reset = function() {
     this.talking_dir = 0;
 
+    this.drone_distance = null;
     if (abs(Player.drone.p.x - this.p.x) < person_interaction_window) {
       close_people_per_tick.push(this);
       this.drone_distance = dist(this.p, Player.drone.p);
@@ -287,6 +288,9 @@ function Person() {
 
   // shooting
   this.shoot = function(at_pos) {
+    if (this.drone_distance === null || this.drone_distance > shoot_drone_window) { return; }
+    if (this.control_level >= 1) { return; }
+
     var p = vec_add(this.p, xy(0, person_size.y * 0.7));
     var dir = Math.atan2(at_pos.y - p.y, at_pos.x - p.x);
     addToLoop('foreground2', new Bullet(p, dir))
