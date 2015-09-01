@@ -105,17 +105,29 @@ var Drone = function(p) {
     // body
     draw.r(ctx,
       // `crunch
-      xy(- width, - height),
-      xy(+ width, + height),
+      xy(-width, -height),
+      xy(+width, +height),
       fill
     );
 
     // arms
     draw.l(ctx,
-      xy(- arm_x, + height + arm_y),
-      xy(+ arm_x, + height + arm_y),
+      xy(-arm_x, +height + arm_y),
+      xy(+arm_x, +height + arm_y),
       strk
-    )
+    );
+
+    // legs (`crunch)
+    draw.l(ctx,
+      xy(-arm_x*0.5, +height + arm_y),
+      xy(-2.2 * width, -1.8 * height),
+      strk
+    );
+    draw.l(ctx,
+      xy(+arm_x*0.5, +height + arm_y),
+      xy(2.2 * width, -1.8 * height),
+      strk
+    );
 
     // copter blades above arms
     function drawBlade(xpos, xscale) {
