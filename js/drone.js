@@ -196,26 +196,26 @@ var Drone = function(p) {
   // to be more responsive, these methods adjust velocity immediately as well as
   // contributing to acceleration
   this.powerUp = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.y += 0.05;
     this.rpm_scale += dronePowerAccel;
   }
   
   this.powerDown = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.y -= 0.05;
     this.rpm_scale -= dronePowerAccel;
   }
 
   this.tiltLeft = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.x -= 0.1;
     this.rpm_diff -= droneTiltAccel;
     this.tilt = -max_tilt;
   }
 
   this.tiltRight = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.x += 0.1;
     this.rpm_diff += droneTiltAccel;
     this.tilt = max_tilt;

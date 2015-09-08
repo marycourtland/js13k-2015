@@ -40,11 +40,33 @@ var environment = {
     var x1 = tower.x - tower.w/2;
     var x2 = tower.x + tower.w/2;
     var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
+    var fill = draw.shapeStyle(tower.color);
     draw.r(tower.ctx,
       xy(x1, y0 - 0.5),
       xy(x2, y0 + tower.h),
-      draw.shapeStyle(tower.color)
+      fill
     )
+    if (tower.dome) {
+      draw.c(tower.ctx,
+        xy(tower.x, y0 + tower.h),
+        tower.w/2 * 0.8,
+        fill
+      )
+    }
+    if (tower.slant) {
+      var h = y0 + tower.h - 0.1;
+      var r1 = 0.9 * tower.w/2;
+      var r2 = r1 * tower.slant_ratio;
+      var p0 = xy(tower.x, y0 + tower.h)
+      draw.p(tower.ctx,
+        [
+          xy(tower.x - r1, h),
+          xy(tower.x + r1, h),
+          xy(tower.x, h + r2),
+        ],
+        fill
+      )
+    }
   },
 
   generate: function() {
@@ -75,6 +97,9 @@ var environment = {
         h: rnds(5, 22),
         ctx: rnd_choice([bg1.ctx, bg2.ctx])
       };
+      t.slant = probability(tower_dome_probability);
+      if (t.slant) { t.slant_ratio = rnds(1.2, 1.5); }
+      t.dome = !t.slant && probability(tower_slant_probability);
       t.ctx = (t.h > 18) ? bg1.ctx : bg2.ctx;
       t.color = (t.h > 18) ? tower_color1 : tower_color2;
 
@@ -83,18 +108,23 @@ var environment = {
   },
 
   generateTerrainFunction: function() {
+    var mfp = function(m, f, p) { return {m:m, f:f, p:p}; } // magnitude, frequency, phase
     var frequencies = [];
     for (var i = 0; i < 10; i++) {
-      frequencies.push(1/rnds(1, 5));
+      var f = 1/rnds(1, 5);
+      frequencies.push(mfp(f, 1/(f*100), rnds(0, 100)));
     }
 
     // some lower-frequency rolling
-    frequencies.push(1/rnds(10, 12));
+    for (var i = 0; i < 10; i++) {
+      var f = 1/rnds(20, 40);
+      frequencies.push(mfp(f, 1/(f*100), rnds(0, 100)));
+    }
 
     return function(x) {
       var y = 0;
       frequencies.forEach(function(f) {
-        y += 1/(f * 100) * sin(f*x + rnds(0, 0.5));
+        y += f.m * sin(f.f*x + f.p + rnds(0, 0.05));
       })
       return y;
     }

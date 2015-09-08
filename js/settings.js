@@ -14,6 +14,8 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 ,   num_tower_clumps = 60
 ,   num_towers_per_clump = 10
 ,   tower_clump_width = 80
+,   tower_dome_probability = 0.1
+,   tower_slant_probability = 0.1
 
 // Buildings
 ,   door_size = xy(0.7, 1.2) // slightly larger than person
