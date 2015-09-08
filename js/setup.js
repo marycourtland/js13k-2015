@@ -43,7 +43,8 @@ var Camera = {
 
   moveBy: function(p) {
     game_origin = vec_add(game_origin, p);
-    global.bg.moveBy(p);
+    global.bg1.moveBy(p);
+    global.bg2.moveBy(p);
     global.stage.moveBy(p);
   },
 
@@ -56,7 +57,8 @@ var Camera = {
 
 global.game_origin = xy(0, 0);
 
-global.bg = new Layer("#game_background", scale(game_size, 1/0.95), scale(game_scale, 0.95));
+global.bg1 = new Layer("#game_background1", scale(game_size, 1/0.9), scale(game_scale, 0.9));
+global.bg2 = new Layer("#game_background2", scale(game_size, 1/0.95), scale(game_scale, 0.95));
 global.stage = new Layer("#game_stage", game_size, game_scale);
 global.overlay = new Layer("#game_overlay", game_size, game_scale);
 

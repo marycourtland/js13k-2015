@@ -23,6 +23,13 @@ var Platform = function(origin, xres, xrange, ypoints, thickness) {
     );
   };
 
+  this.getMin = function(x1, x2) {
+    x1 = floorTo(x1 - this.xres_offset, this.xres) + this.xres_offset;
+    x2 = ceilTo(x2 - this.xres_offset, this.xres) + this.xres_offset;
+    var platform = this;
+    return min.apply(null, range(x1, x2 + 1, platform.xres).map(function(x) { return platform.y[x]; }))
+  };
+
   this.getPolygon = function(thickness) {
     var pts = [];
     pts.push(xy(this.xrange[0], this.y0 - thickness));

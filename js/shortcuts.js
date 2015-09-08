@@ -1,3 +1,4 @@
+// `crunch: audit these for unused or underused functions
 
 // HTML ==============================================================
 var global = window
@@ -68,6 +69,22 @@ var global = window
   }
 , bounds = function(x, bounds) {
     return max(min(x, max.apply(null, bounds)), min.apply(null, bounds));
+  }
+, vcopy = function(p) {
+    return xy(p.x, p.y);
+  }
+
+  // `crunch: maybe elsewhere in the code could use this
+, range = function(start, end, skip) {
+    skip = skip || 1;
+    var output_range = [];
+    for (var i = start; i < end; i += skip) {
+      output_range.push(i);
+    }
+    return output_range;
+  }
+, perturb = function(value, amount) {
+    return value + rnds(-amount, amount);
   }
 
 // other stuff...

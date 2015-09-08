@@ -1,4 +1,5 @@
 global.onload = function() {
+  console.log('STUFF:', bg1, bg2, bg1.ctx, bg2.ctx)
   environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
@@ -14,7 +15,7 @@ global.onload = function() {
   // `temp sample people/items
   global.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0)});
   global.p2 = (new Person()).init({p: xy(18, 3)});
-  global.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0)});
+  global.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0), role: roles.guard});
   
 
   // Game target: if you overpower this one, you win
@@ -23,13 +24,13 @@ global.onload = function() {
   global.battery1 = new Battery(xy(23, 3));
   global.battery2 = new Battery(xy(28, 3));
 
-  global.building = new Building(50, xy(10, 15));
-
   global.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
   Player.drone.controlFull(p);
 
 
-  addToLoop('background', [Player, global.building]);
+  addToLoop('background', [Player]);
+
+  addToLoop('background', environment.buildings)
 
   addToLoop('foreground1', [
       battery1,
@@ -49,7 +50,9 @@ global.onload = function() {
 
   addToLoop('overlay', [Camera, Hud]);
 
-  building.prepopulate({normal: 5});
+  environment.buildings.forEach(function(b) {
+    b.prepopulate();
+  });
   
   startGame();
 };

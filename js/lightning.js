@@ -62,6 +62,7 @@ lightning = {
     Player.drone.color = '#bbf';
     this.onFinish = function() {
       Player.drone.color = old_drone_color;
+      Player.drone.dockIntegrity(lightning_integrity_decrease);
     }
   },
 

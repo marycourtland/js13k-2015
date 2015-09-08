@@ -26,8 +26,8 @@ var Player = {
     40: {isDown: 0, onUp: function() { if (probability(Player.drone.controlStrength())) { console.log('ok'); Player.drone.person.itemInteract();} }},
     38: {isDown: 0, onUp: function() { Player.drone.person.useItem(); }},
     32: {isDown: 0, whenDown: function() {
-      // Player must hold down spacebar for the requisite length of time
-      Player.drone.attemptControl();
+      // press spacebar to start controlling
+      Player.drone.attempting_control = !Player.drone.attempting_control;
     }}
   },
 }

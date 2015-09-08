@@ -9,12 +9,26 @@
 function Role(options) {
   this.draw = options.draw || null_function;
   this.onControl = options.onControl || null_function;
+  this.tick = options.tick || null_function;
 };
 
 var roles = {
   normal: new Role({
     draw: function() {
-      this.drawSash('#7ca');
+      // this.drawSash('#7ca');
+    }
+  }),
+
+  guard: new Role({
+    tick: function() {
+      if ( gameplay_frame % bullet_frequency === 0) {
+        this.shoot(Player.drone.p_drawn);
+      }
+    },
+
+    draw: function() {
+      this.drawSash('#a21', -1);
+      this.drawSash('#a21', 1); // `crunch
     }
   }),
 

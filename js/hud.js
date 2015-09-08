@@ -22,18 +22,40 @@ var Hud = {
 
       draw.r(overlay.ctx,
         p,
-        vec_add(p, energy_meter_size),
+        vec_add(p, bar_meter_size),
         draw.shapeStyle(hud_color_dark)
       );
       
       draw.r(overlay.ctx,
         p,
-        vec_add(p, xy(energy_meter_size.x * Player.drone.energy, energy_meter_size.y)),
+        vec_add(p, xy(bar_meter_size.x * Player.drone.energy, bar_meter_size.y)),
         draw.shapeStyle(hud_color)
       );
 
       // `todo: include a percentage next to the bar
 
+    },
+
+    integrity: function() {
+      // `CRUNCH: this is essentially same as the energy meter. Just the icon adjustment is off a bit
+      var p = vec_add(vec_add(overlay.origin, overlay.size), integrity_meter_position);
+      Player.drone.drawRepr(vec_add(p, xy(0, 0.3)), 2, draw.shapeStyle(hud_color), {ctx: overlay.ctx});
+
+      p = vec_add(p, xy(1.5, 0.1));
+
+      draw.r(overlay.ctx,
+        p,
+        vec_add(p, bar_meter_size),
+        draw.shapeStyle(hud_color_dark)
+      );
+      
+      draw.r(overlay.ctx,
+        p,
+        vec_add(p, xy(bar_meter_size.x * Player.drone.integrity, bar_meter_size.y)),
+        draw.shapeStyle(hud_color)
+      );
+
+      // `todo: include a percentage next to the bar
     },
 
     rpm: function() {

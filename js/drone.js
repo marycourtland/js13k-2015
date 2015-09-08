@@ -6,10 +6,13 @@ var Drone = function(p) {
   this.p_drawn = p;
   this.gravity = true;
   this.energy = 1; // goes from 0 to 1
+  this.integrity = 1; // goes from 0 to 1. Basically health
   this.powered = true;
   this.rpm_scale = 0.83;
   this.control_t0 = 0;
   this.control_signal_target = null;
+  this.attempting_control = true;
+
   this.rpm_scale = 0.83; // starting value
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
   this.color = 'black';
@@ -21,7 +24,18 @@ var Drone = function(p) {
 
   this.person = null,
 
+  this.boundify = function() {
+    // Make sure each property is in its proper bounds
+    this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
+    this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
+    this.tilt = bounds(this.tilt, [-pi/2, pi/2]);
+    this.energy = bounds(this.energy, [0, 1]);
+    this.integrity = bounds(this.integrity, [0, 1]);
+  }
+
   this.reset = function() {
+    this.boundify();
+
     // compute position offset
     this.offset = 0;
     for (var frame in this.offsets) {
@@ -44,30 +58,27 @@ var Drone = function(p) {
     // acceleration given by copter blades
     this.v = vec_add(this.v, this.getLiftAccel());
 
-    // decay the tilt
-    this.tilt *= 0.9;
+    // Dynamics
+    this.tilt *= 0.9; // decay the tilt
 
-    // introduce a good bit of sideways drag
-    this.v.x *= 0.95;
+    this.v.x *= 0.95; // sideways drag
     this.rpm_diff += (this.rpm_diff > 0 ? -0.003 : 0.003);
 
-    //this will take care of gravity
-    this.__proto__.tick.apply(this);
-
-    this.energy = max(this.energy - this.getEnergyDrain(), 0);
-
-    if (this.energy == 0) {
-      this.die();
-    }
+    this.__proto__.tick.apply(this); // this takes care of gravity + velocity application
 
     // The drone's *actual* drawn position is offset a bit
     // this is for better aerodynamic fakery
     this.p_drawn = xy(this.p.x, this.p.y + this.offset);
 
+    // Stats
+    this.drainEnergy();
+    this.checkStats();
 
-    this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
-    this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
-    this.tilt = bounds(this.tilt, [-pi/2, pi/2]);
+    this.boundify();
+
+    if (this.attempting_control) {
+      this.attemptControl();
+    }
   }
 
   this.draw = function() { 
@@ -82,14 +93,17 @@ var Drone = function(p) {
     }
 
     // The drone itself
-    this.drawRepr(this.p_drawn, 1, draw.shapeStyle(this.color), this.tilt);
+    this.drawRepr(this.p_drawn, 1, draw.shapeStyle(this.color), {tilt:this.tilt});
   }
 
-  this.drawRepr = function(p, scale, fill, tilt) {
+  this.drawRepr = function(p, scale, fill, params) {
     // `CRUNCH: This whole method
-    tilt = tilt || 0;
-    ctx.translate(p.x, p.y);
-    ctx.rotate(-tilt);
+    params = params || {};
+    var tilt = params.tilt || 0;
+    var _ctx = params.ctx || ctx;
+
+    _ctx.translate(p.x, p.y);
+    _ctx.rotate(-tilt);
 
     var strk = draw.lineStyle(fill.fillStyle, {lineWidth: scale * drone_arm_size.y});
 
@@ -103,29 +117,41 @@ var Drone = function(p) {
     var blade_y = scale * drone_blade_size.y/2;
 
     // body
-    draw.r(ctx,
+    draw.r(_ctx,
       // `crunch
-      xy(- width, - height),
-      xy(+ width, + height),
+      xy(-width, -height),
+      xy(+width, +height),
       fill
     );
 
     // arms
-    draw.l(ctx,
-      xy(- arm_x, + height + arm_y),
-      xy(+ arm_x, + height + arm_y),
+    draw.l(_ctx,
+      xy(-arm_x, +height + arm_y),
+      xy(+arm_x, +height + arm_y),
       strk
-    )
+    );
+
+    // legs (`crunch)
+    draw.l(_ctx,
+      xy(-arm_x*0.5, +height + arm_y),
+      xy(-2.2 * width, -1.8 * height),
+      strk
+    );
+    draw.l(_ctx,
+      xy(+arm_x*0.5, +height + arm_y),
+      xy(2.2 * width, -1.8 * height),
+      strk
+    );
 
     // copter blades above arms
     function drawBlade(xpos, xscale) {
       // `crunch
-      draw.r(ctx,
+      draw.r(_ctx,
         xy(xpos - xscale * blade_x, height + arm_y*2 + 0.05),
         xy(xpos + xscale * blade_x, height + arm_y*2 + 0.05 + blade_y*2),
         fill
       );
-      draw.l(ctx,
+      draw.l(_ctx,
         xy(xpos, height + arm_y),
         xy(xpos, height + arm_y*2 + 0.1),
         strk
@@ -133,18 +159,28 @@ var Drone = function(p) {
     }
 
     var f = 0.8;
-    var blade_phase = (this.powered && (typeof this.rpm_scale !== 'undefined')) ? this.rpm_scale * gameplay_frame : 0.8;
+    var blade_phase = (this.powered && (typeof this.rpm_scale !== 'undefined') && !params.freeze) ? this.rpm_scale * gameplay_frame : 0.8;
     drawBlade(scale * drone_arm_size.x - 0.05, sin(f * blade_phase));
     drawBlade(-scale * drone_arm_size.x + 0.05, sin(f * blade_phase));
 
-    ctx.rotate(tilt);
-    ctx.translate(-p.x, -p.y);
+    _ctx.rotate(tilt);
+    _ctx.translate(-p.x, -p.y);
   }
 
-  this.die = function() {
+  this.checkStats = function() {
+    // `crunch: the 'refresh to play again' can be consolidated
+    if (this.energy <= 0) {
+      this.die('Your battery is drained. Refresh to play again.');
+    }
+    else if (this.integrity <= 0) {
+      this.die('Structural integrity failure. Refresh to play again.')
+    }
+  }
+
+  this.die = function(reason) {
       this.powered = false;
       this.rpm_scale = 0;
-      notify('Your battery is drained. Refresh to play again.')
+      notify(reason || 'You have died... for no reason. Refresh to play again.')
   }
   
   // Fake aerodynamics! ========================================================
@@ -160,26 +196,26 @@ var Drone = function(p) {
   // to be more responsive, these methods adjust velocity immediately as well as
   // contributing to acceleration
   this.powerUp = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.y += 0.05;
     this.rpm_scale += dronePowerAccel;
   }
   
   this.powerDown = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.y -= 0.05;
     this.rpm_scale -= dronePowerAccel;
   }
 
   this.tiltLeft = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.x -= 0.1;
     this.rpm_diff -= droneTiltAccel;
     this.tilt = -max_tilt;
   }
 
   this.tiltRight = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.x += 0.1;
     this.rpm_diff += droneTiltAccel;
     this.tilt = max_tilt;
@@ -244,7 +280,7 @@ var Drone = function(p) {
     }
 
     // If the control level on the person exceeds their resistance, the person has been overpowered
-    if (person.control_level >= person.resistance) {
+    if (person && person.control_level >= person.resistance) {
       this.controlFull(person);
     }
   }
@@ -257,16 +293,20 @@ var Drone = function(p) {
   }
 
 
-  // Energy related ========================================================
+  // Stats related ========================================================
 
   this.fillEnergy = function() {
     this.energy = 1;
   }
 
-  this.getEnergyDrain = function() {
+  this.drainEnergy = function() {
     // per frame
     // this combines all the possible factors which contribute to energy drain;
-    return drone_drain_rate * this.rpm_scale;
+    this.energy -= drone_drain_rate * this.rpm_scale;
+  }
+
+  this.dockIntegrity = function(amount) {
+    this.integrity -= amount;
   }
 
 }
