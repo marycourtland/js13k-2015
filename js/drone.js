@@ -11,6 +11,8 @@ var Drone = function(p) {
   this.rpm_scale = 0.83;
   this.control_t0 = 0;
   this.control_signal_target = null;
+  this.attempting_control = false;
+
   this.rpm_scale = 0.83; // starting value
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
   this.color = 'black';
@@ -73,6 +75,10 @@ var Drone = function(p) {
     this.checkStats();
 
     this.boundify();
+
+    if (this.attempting_control) {
+      this.attemptControl();
+    }
   }
 
   this.draw = function() { 
@@ -274,7 +280,7 @@ var Drone = function(p) {
     }
 
     // If the control level on the person exceeds their resistance, the person has been overpowered
-    if (person.control_level >= person.resistance) {
+    if (person && person.control_level >= person.resistance) {
       this.controlFull(person);
     }
   }

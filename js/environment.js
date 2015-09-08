@@ -4,35 +4,27 @@ var environment = {
 
   pts: [],
   towers: [], // Towers in the background skyline represented by [x, width, height]
-
   buildings: [], // buildings in the foreground which hold people
 
 
   // Game loop
 
   reset: function() {
+    bg2.clear();
+    stage.clear();
+
     // Background
     // (even though this is drawing-related, it needs to come before anything else)
-    var grd = bg.ctx.createLinearGradient(0, 0, 0, bg.size.y * 1.2);
+    var grd = bg1.ctx.createLinearGradient(0, 0, 0, bg1.size.y * 1.2);
     backgroundGradient.forEach(function(params) {
       grd.addColorStop.apply(grd, params);
     })
-    draw.r(bg.ctx, bg.origin, xy(bg.origin.x + bg.size.x, bg.origin.y + bg.size.y), draw.shapeStyle(grd));
+    draw.r(bg1.ctx, bg1.origin, xy(bg1.origin.x + bg1.size.x, bg1.origin.y + bg1.size.y), draw.shapeStyle(grd));
 
     // Draw towers (decorative only for now)
     // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
-    this.towers.forEach(function(tower) {
-      var x1 = tower.x - tower.w/2;
-      var x2 = tower.x + tower.w/2;
-      var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
-      draw.r(bg.ctx,
-        xy(x1, y0 - 0.5),
-        xy(x2, y0 + tower.h),
-        draw.shapeStyle(tower_color)
-      )
-    });
+    this.towers.forEach(this.drawTower);
 
-    stage.clear();
   },
 
 
@@ -42,6 +34,17 @@ var environment = {
     // Ground
     var fill = draw.shapeStyle(environment_color);
     draw.p(stage.ctx, this.pts, fill);
+  },
+
+  drawTower: function(tower) {
+    var x1 = tower.x - tower.w/2;
+    var x2 = tower.x + tower.w/2;
+    var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
+    draw.r(tower.ctx,
+      xy(x1, y0 - 0.5),
+      xy(x2, y0 + tower.h),
+      draw.shapeStyle(tower.color)
+    )
   },
 
   generate: function() {
@@ -66,12 +69,16 @@ var environment = {
     var n = num_towers_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
-      this.towers.push({
+      var t = {
         x: rnds(x0 - tower_clump_width/2, x0 + tower_clump_width/2),
         w: rnds(4, 7),
-        h: rnds(5, 20)
-      })
+        h: rnds(5, 22),
+        ctx: rnd_choice([bg1.ctx, bg2.ctx])
+      };
+      t.ctx = (t.h > 18) ? bg1.ctx : bg2.ctx;
+      t.color = (t.h > 18) ? tower_color1 : tower_color2;
 
+      this.towers.push(t);
     }
   },
 

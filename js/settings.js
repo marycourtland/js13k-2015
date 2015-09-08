@@ -89,7 +89,7 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 ;
 
 // color schemes (can't decide which one yet)
-var scheme = 1;
+var scheme = 2;
 
 if (scheme === 1) {
   var environment_color = '#1b1b1b'
@@ -103,7 +103,8 @@ if (scheme === 1) {
       ]
   ,   awesome_glow_color = '#fff'
 
-  ,   tower_color = '#222'
+  ,   tower_color1 = '#111'
+  ,   tower_color2 = '#333'
   ,   building_color = '#3E373E'
   ,   door_color = '#776'
 
@@ -129,7 +130,8 @@ else if (scheme === 2) {
   ,   backgroundGradient = [[1.0, '#777788'], [0, '#888888']]
   ,   awesome_glow_color = '#fff'
 
-  ,   tower_color = '#666366'
+  ,   tower_color1 = '#666366'
+  ,   tower_color2 = '#555255'
   ,   building_color = '#3E373E'
   ,   door_color = '#636666'
 

@@ -15,7 +15,7 @@ function Role(options) {
 var roles = {
   normal: new Role({
     draw: function() {
-      this.drawSash('#7ca');
+      // this.drawSash('#7ca');
     }
   }),
 
