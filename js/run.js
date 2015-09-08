@@ -23,13 +23,13 @@ global.onload = function() {
   global.battery1 = new Battery(xy(23, 3));
   global.battery2 = new Battery(xy(28, 3));
 
-  global.building = new Building(50, xy(10, 15));
-
   global.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
   Player.drone.controlFull(p);
 
 
-  addToLoop('background', [Player, global.building]);
+  addToLoop('background', [Player]);
+
+  addToLoop('background', environment.buildings)
 
   addToLoop('foreground1', [
       battery1,
@@ -49,7 +49,9 @@ global.onload = function() {
 
   addToLoop('overlay', [Camera, Hud]);
 
-  building.prepopulate({normal: 5});
+  environment.buildings.forEach(function(b) {
+    b.prepopulate();
+  });
   
   startGame();
 };

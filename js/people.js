@@ -64,8 +64,7 @@ function Person() {
   this.switchBehavior = function(new_behavior) {
     if (!new_behavior) {
       // Switch between walking and idle
-      new_behavior = 'idle';
-      //new_behavior = this.current_behavior === 'amble' ? 'idle' : 'amble'
+      new_behavior = this.current_behavior === 'amble' ? 'idle' : 'amble'
     }
     // For now, choose another behavior at random
     this.current_behavior = new_behavior;

@@ -1,10 +1,11 @@
 // ENVIRONMENT =======================================================
 var environment = {
-  ground: new Platform(xy(-100, 3), 0.5, [-100, 1000], {}),
+  ground: new Platform(xy(world_size[0], 3), 1, world_size, {}),
 
-  // Height
   pts: [],
-  towers: [], // Towers in the skyline represented by [x, width, height]
+  towers: [], // Towers in the background skyline represented by [x, width, height]
+
+  buildings: [], // buildings in the foreground which hold people
 
 
   // Game loop
@@ -56,6 +57,8 @@ var environment = {
     for (var i = 0; i < num_tower_clumps; i++) {
       this.generateTowerClump();
     }
+
+    this.generatePeopleBuildings();
   },
 
   generateTowerClump: function() {
@@ -89,5 +92,24 @@ var environment = {
       return y;
     }
 
+  },
+
+  // `crunch
+  generatePeopleBuildings: function() {
+    var num_people = person_frequency * (world_size[1] - world_size[0]);
+    var num_buildings = num_people / avg_people_per_building;
+    var avg_building_spacing = (world_size[1] - world_size[0]) / num_buildings;
+
+    // building positions should be evenly distributed
+    // ... but perturbed a little bit
+    var buildings = range(world_size[0] + world_buffer, world_size[1] - world_buffer, avg_building_spacing)
+      .forEach(function(pos) {
+        var b = new Building(
+          perturb(pos, 10),
+          xy(perturb(10, 4), perturb(12, 4))  // `temp size. it should depend on number of people
+        );
+        b.peopleCounts = {normal: avg_people_per_building};
+        environment.buildings.push(b);
+      })
   }
 }

@@ -71,8 +71,21 @@ var global = window
     return max(min(x, max.apply(null, bounds)), min.apply(null, bounds));
   }
 , vcopy = function(p) {
-  return xy(p.x, p.y);
-}
+    return xy(p.x, p.y);
+  }
+
+  // `crunch: maybe elsewhere in the code could use this
+, range = function(start, end, skip) {
+    skip = skip || 1;
+    var output_range = [];
+    for (var i = start; i < end; i += skip) {
+      output_range.push(i);
+    }
+    return output_range;
+  }
+, perturb = function(value, amount) {
+    return value + rnds(-amount, amount);
+  }
 
 // other stuff...
 , resetify = function(item) { if (item.reset) item.reset(); }
@@ -180,33 +193,27 @@ var draw = {
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(18, 18) // pixels -> game units conversion
+var game_scale = xy(20,20) // pixels -> game units conversion
 ,   game_size = xy((global.innerWidth - 20)/game_scale.x, 30)
 ,   camera_margin = xy(4, 4)
 ,   units_per_meter = 2 // for realistic size conversions
 
-// Aesthetic stuff
-,   backgroundGradient = [
-        // gradient color stops
-        [1.0, '#111320'],
-        [0.85, '#17182a'],
-        [0.7, '#1f2035'],
-        [0.4, '#433b4b'],
-        [0.0, '#a16e4f']
-    ]
-,   awesome_glow_color = '#fff'
+,   world_size = [-100, 1000] // Horizontal bounds
+,   world_buffer = 10
+
 
 // Environment
-,   environment_color = '#1b1b1b'
-,   tower_color = '#222'
-,   num_tower_clumps = 30
+,   num_tower_clumps = 60
 ,   num_towers_per_clump = 10
 ,   tower_clump_width = 80
 
 // Buildings
-,   building_color = '#2E272E'
-,   door_color = '#665'
 ,   door_size = xy(0.7, 1.2) // slightly larger than person
+,   person_frequency = 0.15 // people per game unit. not evenly distributed
+,   avg_people_per_building = 4 // AVERAGE
+,   avg_building_size = xy(10, 10)
+,   people_comeout_window = 8
+
 
 // Dynamics
 // *** Gravity estimate is very sensitive to FPS measurement
@@ -233,9 +240,7 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 
 // People
 ,   person_size = xy(0.3, 0.6)
-,   person_color = '#000'
 ,   person_speed = 0.3
-,   controlled_person_color = '#000'
 ,   person_control_rate = 0.05 // rate at which control level increases or drops
 ,   min_person_resistance = 2 * person_control_rate
 ,   person_interaction_window = 15
@@ -247,8 +252,6 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 ,   drone_body_size = xy(0.3, 0.2)
 ,   drone_arm_size = xy(0.4, 0.05) // from center
 ,   drone_blade_size = xy(0.5, 0.1)
-,   drone_color = '#000'
-,   drone_signal_color = '#9eb'
 ,   drone_drain_rate = 0.00005 // energy per frame
 ,   drone_low_energy = 0.1
 ,   drone_high_energy = 0.9
@@ -258,24 +261,17 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 ,   bullet_radius = 0.075
 ,   bullet_hit_distance = 0.5
 ,   bullet_speed = 1.8
-,   bullet_color = '#eee'
 ,   bullet_frequency = 50 // frames between a guard's bullets
 ,   bullet_integrity_decrease = 0.05 // how much structural integrity does a bullet disrupt?
 
 // Items
 ,   battery_size = {x: 0.5, y: 0.3}
-,   battery_color = "#000"
 
 
 // Ideas
 ,   idea_scale = 0.7
-,   idea_color = "#ddd"
 
 // HUD - positions are referenced from the upper right corner of game
-,   hud_color = '#abb'
-,   hud_color_dark = '#355'
-,   hud_red = '#811'
-,   hud_green = '#161'
 ,   hud_dial_radius = 1
 ,   bar_meter_size = xy(4, 0.5)
 ,   energy_meter_position = xy(-12, -1.5)
@@ -283,6 +279,72 @@ var game_scale = xy(18, 18) // pixels -> game units conversion
 ,   rpm_meter_position = xy(-3, -1.5)
 
 ;
+
+// color schemes (can't decide which one yet)
+var scheme = 1;
+
+if (scheme === 1) {
+  var environment_color = '#1b1b1b'
+  ,   backgroundGradient = [
+          // gradient color stops
+          [1.0, '#111320'],
+          [0.85, '#17182a'],
+          [0.7, '#1f2035'],
+          [0.4, '#433b4b'],
+          [0.0, '#a16e4f']
+      ]
+  ,   awesome_glow_color = '#fff'
+
+  ,   tower_color = '#222'
+  ,   building_color = '#3E373E'
+  ,   door_color = '#776'
+
+  ,   person_color = '#000'
+  ,   controlled_person_color = '#000'
+
+  ,   drone_color = '#000'
+  ,   drone_signal_color = '#9eb'
+
+  ,   bullet_color = '#eee'
+  ,   battery_color = "#000"
+  ,   idea_color = "#ddd"
+
+  ,   hud_color = '#abb'
+  ,   hud_color_dark = '#355'
+  ,   hud_red = '#811'
+  ,   hud_green = '#161'
+  ,   hud_text = '#abb'
+}
+
+else if (scheme === 2) {
+  var environment_color = '#1b1b1b'
+  ,   backgroundGradient = [[1.0, '#777788'], [0, '#888888']]
+  ,   awesome_glow_color = '#fff'
+
+  ,   tower_color = '#666366'
+  ,   building_color = '#3E373E'
+  ,   door_color = '#636666'
+
+  ,   person_color = '#000'
+  ,   controlled_person_color = '#000'
+
+  ,   drone_color = '#000'
+  ,   drone_signal_color = '#9eb'
+
+  ,   bullet_color = '#eee'
+  ,   battery_color = "#000"
+  ,   idea_color = "#ddd"
+
+  ,   hud_color = '#445'
+  ,   hud_color_dark = '#aab'
+  ,   hud_red = '#811'
+  ,   hud_green = '#161'
+  ,   hud_text = '#112'
+}
+
+// `crunch remove this from the css I suppose
+$("#game-message").style.color = hud_text;
+
 // SETUP =============================================================
 
 
@@ -373,6 +435,13 @@ var Platform = function(origin, xres, xrange, ypoints, thickness) {
     );
   };
 
+  this.getMin = function(x1, x2) {
+    x1 = floorTo(x1 - this.xres_offset, this.xres) + this.xres_offset;
+    x2 = ceilTo(x2 - this.xres_offset, this.xres) + this.xres_offset;
+    var platform = this;
+    return min.apply(null, range(x1, x2 + 1, platform.xres).map(function(x) { return platform.y[x]; }))
+  };
+
   this.getPolygon = function(thickness) {
     var pts = [];
     pts.push(xy(this.xrange[0], this.y0 - thickness));
@@ -411,19 +480,27 @@ global.buildings = []; // index of all buildings in game
 
 function Building(x0, size, platform) {
   this.container_platform = platform || environment.ground;
-  this.p = this.container_platform.pointAt(x0); // lower left corner
+  this.p = xy(
+    x0, 
+    this.container_platform.getMin(x0, x0 + size.y)
+  )
+
   this.size = size; // xy of width and height
   this.platforms = [];
   this.people = [];
-  this.door_p = vec_add(this.p, xy(rnd() * this.size.x, 0));
+  this.emptied = false;
+  this.door_p = vec_add(this.p, xy(door_size.x + rnd() * (this.size.x - 2*door_size.x), 0));
   this.__proto__.setupPlatform.call(this, makePlatform(this.p, this.size));
   global.buildings.push(this);
+
+  this.peopleCounts = {};
 }
 
 Building.prototype = {
 
   // peopleCounts: maps person role -> number of people
   prepopulate: function(peopleCounts) {
+    peopleCounts = peopleCounts || this.peopleCounts;
     for (var roleName in peopleCounts) {
       var role = roles[roleName];
       for (var i = 0; i < peopleCounts[roleName]; i++) {
@@ -435,6 +512,9 @@ Building.prototype = {
   },
 
   tick: function() {
+    if (!this.emptied && dist(Player.drone.p, this.p) < people_comeout_window) {
+      this.everyoneExits();
+    }
   },
 
   draw: function() {
@@ -461,17 +541,29 @@ Building.prototype = {
     return person;
   },
 
+  everyoneExits: function(direction) {
+    for (var i = 0; i < this.people.length; i++) {
+      var building = this;
+      scheduleEvent(i*50, function() {
+        var dir = direction || rnds(-1, 1)
+        building.personExit().v = xy(dir * perturb(0.1, 0.02), 0);
+      })
+    }
+    this.emptied = true;
+  },
+
   // make it function like a platform
   pointAt: function() { return xy(this.door_p.x + door_size.x/2, this.door_p.y); },
   yAt: function() { return this.door_p.y; }
 }
 // ENVIRONMENT =======================================================
 var environment = {
-  ground: new Platform(xy(-100, 3), 0.5, [-100, 1000], {}),
+  ground: new Platform(xy(world_size[0], 3), 1, world_size, {}),
 
-  // Height
   pts: [],
-  towers: [], // Towers in the skyline represented by [x, width, height]
+  towers: [], // Towers in the background skyline represented by [x, width, height]
+
+  buildings: [], // buildings in the foreground which hold people
 
 
   // Game loop
@@ -523,6 +615,8 @@ var environment = {
     for (var i = 0; i < num_tower_clumps; i++) {
       this.generateTowerClump();
     }
+
+    this.generatePeopleBuildings();
   },
 
   generateTowerClump: function() {
@@ -556,6 +650,25 @@ var environment = {
       return y;
     }
 
+  },
+
+  // `crunch
+  generatePeopleBuildings: function() {
+    var num_people = person_frequency * (world_size[1] - world_size[0]);
+    var num_buildings = num_people / avg_people_per_building;
+    var avg_building_spacing = (world_size[1] - world_size[0]) / num_buildings;
+
+    // building positions should be evenly distributed
+    // ... but perturbed a little bit
+    var buildings = range(world_size[0] + world_buffer, world_size[1] - world_buffer, avg_building_spacing)
+      .forEach(function(pos) {
+        var b = new Building(
+          perturb(pos, 10),
+          xy(perturb(10, 4), perturb(12, 4))  // `temp size. it should depend on number of people
+        );
+        b.peopleCounts = {normal: avg_people_per_building};
+        environment.buildings.push(b);
+      })
   }
 }
 
@@ -707,8 +820,7 @@ function Person() {
   this.switchBehavior = function(new_behavior) {
     if (!new_behavior) {
       // Switch between walking and idle
-      new_behavior = 'idle';
-      //new_behavior = this.current_behavior === 'amble' ? 'idle' : 'amble'
+      new_behavior = this.current_behavior === 'amble' ? 'idle' : 'amble'
     }
     // For now, choose another behavior at random
     this.current_behavior = new_behavior;
@@ -1767,6 +1879,12 @@ function go(time) {
   loop_objects.forEach(function(obj) { obj.skip_tick = false; });
   loop_objects.forEach(resetify);
   loop_objects.forEach(tickity);
+
+  if (gameplay_frame in global.schedule) {
+    global.schedule[gameplay_frame].forEach(function(cb) { cb(); });
+    delete global.schedule[gameplay_frame];
+  }
+
   loop_objects.forEach(drawity);
 
   debug("Drone controls: ", Player.drone.person);
@@ -1811,6 +1929,18 @@ function startGame() {
 }
 
 
+// Scheduling events
+// Maps frames > array of callbacks
+global.schedule = {};
+
+function scheduleEvent(framesFromNow, callback) {
+  var scheduled_frame = gameplay_frame + framesFromNow;
+  if (!(scheduled_frame in global.schedule)) {
+    global.schedule[scheduled_frame] = [];
+  }
+  global.schedule[scheduled_frame].push(callback);
+}
+
 
 // For `temporary debugging
 function debug() {
@@ -1850,13 +1980,13 @@ global.onload = function() {
   global.battery1 = new Battery(xy(23, 3));
   global.battery2 = new Battery(xy(28, 3));
 
-  global.building = new Building(50, xy(10, 15));
-
   global.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
   Player.drone.controlFull(p);
 
 
-  addToLoop('background', [Player, global.building]);
+  addToLoop('background', [Player]);
+
+  addToLoop('background', environment.buildings)
 
   addToLoop('foreground1', [
       battery1,
@@ -1876,7 +2006,9 @@ global.onload = function() {
 
   addToLoop('overlay', [Camera, Hud]);
 
-  building.prepopulate({normal: 5});
+  environment.buildings.forEach(function(b) {
+    b.prepopulate();
+  });
   
   startGame();
 };

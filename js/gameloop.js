@@ -48,6 +48,12 @@ function go(time) {
   loop_objects.forEach(function(obj) { obj.skip_tick = false; });
   loop_objects.forEach(resetify);
   loop_objects.forEach(tickity);
+
+  if (gameplay_frame in global.schedule) {
+    global.schedule[gameplay_frame].forEach(function(cb) { cb(); });
+    delete global.schedule[gameplay_frame];
+  }
+
   loop_objects.forEach(drawity);
 
   debug("Drone controls: ", Player.drone.person);
@@ -91,6 +97,18 @@ function startGame() {
   reqAnimFrame(go);
 }
 
+
+// Scheduling events
+// Maps frames > array of callbacks
+global.schedule = {};
+
+function scheduleEvent(framesFromNow, callback) {
+  var scheduled_frame = gameplay_frame + framesFromNow;
+  if (!(scheduled_frame in global.schedule)) {
+    global.schedule[scheduled_frame] = [];
+  }
+  global.schedule[scheduled_frame].push(callback);
+}
 
 
 // For `temporary debugging
