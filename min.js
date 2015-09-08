@@ -206,6 +206,8 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 ,   num_tower_clumps = 60
 ,   num_towers_per_clump = 10
 ,   tower_clump_width = 80
+,   tower_dome_probability = 0.1
+,   tower_slant_probability = 0.1
 
 // Buildings
 ,   door_size = xy(0.7, 1.2) // slightly larger than person
@@ -281,7 +283,7 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 ;
 
 // color schemes (can't decide which one yet)
-var scheme = 1;
+var scheme = 2;
 
 if (scheme === 1) {
   var environment_color = '#1b1b1b'
@@ -295,7 +297,8 @@ if (scheme === 1) {
       ]
   ,   awesome_glow_color = '#fff'
 
-  ,   tower_color = '#222'
+  ,   tower_color1 = '#111'
+  ,   tower_color2 = '#333'
   ,   building_color = '#3E373E'
   ,   door_color = '#776'
 
@@ -321,7 +324,8 @@ else if (scheme === 2) {
   ,   backgroundGradient = [[1.0, '#777788'], [0, '#888888']]
   ,   awesome_glow_color = '#fff'
 
-  ,   tower_color = '#666366'
+  ,   tower_color1 = '#666366'
+  ,   tower_color2 = '#555255'
   ,   building_color = '#3E373E'
   ,   door_color = '#636666'
 
@@ -344,6 +348,10 @@ else if (scheme === 2) {
 
 // `crunch remove this from the css I suppose
 $("#game-message").style.color = hud_text;
+
+// `temp easter egg :)
+var dancetime = !!window.location.search.match(/dancetime=true/);
+
 
 // SETUP =============================================================
 
@@ -390,7 +398,8 @@ var Camera = {
 
   moveBy: function(p) {
     game_origin = vec_add(game_origin, p);
-    global.bg.moveBy(p);
+    global.bg1.moveBy(p);
+    global.bg2.moveBy(p);
     global.stage.moveBy(p);
   },
 
@@ -403,7 +412,8 @@ var Camera = {
 
 global.game_origin = xy(0, 0);
 
-global.bg = new Layer("#game_background", scale(game_size, 1/0.95), scale(game_scale, 0.95));
+global.bg1 = new Layer("#game_background1", scale(game_size, 1/0.9), scale(game_scale, 0.9));
+global.bg2 = new Layer("#game_background2", scale(game_size, 1/0.95), scale(game_scale, 0.95));
 global.stage = new Layer("#game_stage", game_size, game_scale);
 global.overlay = new Layer("#game_overlay", game_size, game_scale);
 
@@ -562,35 +572,27 @@ var environment = {
 
   pts: [],
   towers: [], // Towers in the background skyline represented by [x, width, height]
-
   buildings: [], // buildings in the foreground which hold people
 
 
   // Game loop
 
   reset: function() {
+    bg2.clear();
+    stage.clear();
+
     // Background
     // (even though this is drawing-related, it needs to come before anything else)
-    var grd = bg.ctx.createLinearGradient(0, 0, 0, bg.size.y * 1.2);
+    var grd = bg1.ctx.createLinearGradient(0, 0, 0, bg1.size.y * 1.2);
     backgroundGradient.forEach(function(params) {
       grd.addColorStop.apply(grd, params);
     })
-    draw.r(bg.ctx, bg.origin, xy(bg.origin.x + bg.size.x, bg.origin.y + bg.size.y), draw.shapeStyle(grd));
+    draw.r(bg1.ctx, bg1.origin, xy(bg1.origin.x + bg1.size.x, bg1.origin.y + bg1.size.y), draw.shapeStyle(grd));
 
     // Draw towers (decorative only for now)
     // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
-    this.towers.forEach(function(tower) {
-      var x1 = tower.x - tower.w/2;
-      var x2 = tower.x + tower.w/2;
-      var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
-      draw.r(bg.ctx,
-        xy(x1, y0 - 0.5),
-        xy(x2, y0 + tower.h),
-        draw.shapeStyle(tower_color)
-      )
-    });
+    this.towers.forEach(this.drawTower);
 
-    stage.clear();
   },
 
 
@@ -600,6 +602,46 @@ var environment = {
     // Ground
     var fill = draw.shapeStyle(environment_color);
     draw.p(stage.ctx, this.pts, fill);
+  },
+
+  drawTower: function(tower) {
+    if (dancetime && probability(0.3)) {
+      tower.h += rnds(-0.2, 0.2)
+    }
+    var x1 = tower.x - tower.w/2;
+    var x2 = tower.x + tower.w/2;
+    var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
+    var fill = draw.shapeStyle(tower.color);
+    draw.r(tower.ctx,
+      xy(x1, y0 - 0.5),
+      xy(x2, y0 + tower.h),
+      fill
+    )
+    if (tower.dome) {
+      draw.c(tower.ctx,
+        xy(tower.x, y0 + tower.h),
+        tower.w/2 * 0.8,
+        fill
+      )
+    }
+    if (tower.slant) {
+      if (dancetime) {
+        tower.slant_ratio += rnds(-0.1, 0.1)
+      }
+      var h = y0 + tower.h - 0.2;
+      var r1 = tower.w/2;
+      var r2 = r1 * tower.slant_ratio;
+      var p0 = xy(tower.x, y0 + tower.h)
+
+      draw.p(tower.ctx,
+        [
+          xy(tower.x - r1, h),
+          xy(tower.x + r1, h),
+          xy(tower.x, h + r2),
+        ],
+        fill
+      )
+    }
   },
 
   generate: function() {
@@ -624,28 +666,40 @@ var environment = {
     var n = num_towers_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
-      this.towers.push({
+      var t = {
         x: rnds(x0 - tower_clump_width/2, x0 + tower_clump_width/2),
         w: rnds(4, 7),
-        h: rnds(5, 20)
-      })
+        h: rnds(5, 22),
+        ctx: rnd_choice([bg1.ctx, bg2.ctx])
+      };
+      t.slant = probability(tower_dome_probability);
+      if (t.slant) { t.slant_ratio = rnds(1.2, 1.5); }
+      t.dome = !t.slant && probability(tower_slant_probability);
+      t.ctx = (t.h > 18) ? bg1.ctx : bg2.ctx;
+      t.color = (t.h > 18) ? tower_color1 : tower_color2;
 
+      this.towers.push(t);
     }
   },
 
   generateTerrainFunction: function() {
+    var mfp = function(m, f, p) { return {m:m, f:f, p:p}; } // magnitude, frequency, phase
     var frequencies = [];
     for (var i = 0; i < 10; i++) {
-      frequencies.push(1/rnds(1, 5));
+      var f = 1/rnds(1, 5);
+      frequencies.push(mfp(f, 1/(f*100), rnds(0, 100)));
     }
 
     // some lower-frequency rolling
-    frequencies.push(1/rnds(10, 12));
+    for (var i = 0; i < 10; i++) {
+      var f = 1/rnds(20, 40);
+      frequencies.push(mfp(f, 1/(f*100), rnds(0, 100)));
+    }
 
     return function(x) {
       var y = 0;
       frequencies.forEach(function(f) {
-        y += 1/(f * 100) * sin(f*x + rnds(0, 0.5));
+        y += f.m * sin(f.f*x + f.p + rnds(0, 0.05));
       })
       return y;
     }
@@ -1092,7 +1146,7 @@ function Role(options) {
 var roles = {
   normal: new Role({
     draw: function() {
-      this.drawSash('#7ca');
+      // this.drawSash('#7ca');
     }
   }),
 
@@ -1133,6 +1187,8 @@ var Drone = function(p) {
   this.rpm_scale = 0.83;
   this.control_t0 = 0;
   this.control_signal_target = null;
+  this.attempting_control = true;
+
   this.rpm_scale = 0.83; // starting value
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
   this.color = 'black';
@@ -1195,6 +1251,10 @@ var Drone = function(p) {
     this.checkStats();
 
     this.boundify();
+
+    if (this.attempting_control) {
+      this.attemptControl();
+    }
   }
 
   this.draw = function() { 
@@ -1312,26 +1372,26 @@ var Drone = function(p) {
   // to be more responsive, these methods adjust velocity immediately as well as
   // contributing to acceleration
   this.powerUp = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.y += 0.05;
     this.rpm_scale += dronePowerAccel;
   }
   
   this.powerDown = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.y -= 0.05;
     this.rpm_scale -= dronePowerAccel;
   }
 
   this.tiltLeft = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.x -= 0.1;
     this.rpm_diff -= droneTiltAccel;
     this.tilt = -max_tilt;
   }
 
   this.tiltRight = function() {
-    if (this.skip_tick) { return; }
+    if (this.skip_tick || !this.powered) { return; }
     this.v.x += 0.1;
     this.rpm_diff += droneTiltAccel;
     this.tilt = max_tilt;
@@ -1396,7 +1456,7 @@ var Drone = function(p) {
     }
 
     // If the control level on the person exceeds their resistance, the person has been overpowered
-    if (person.control_level >= person.resistance) {
+    if (person && person.control_level >= person.resistance) {
       this.controlFull(person);
     }
   }
@@ -1457,8 +1517,8 @@ var Player = {
     40: {isDown: 0, onUp: function() { if (probability(Player.drone.controlStrength())) { console.log('ok'); Player.drone.person.itemInteract();} }},
     38: {isDown: 0, onUp: function() { Player.drone.person.useItem(); }},
     32: {isDown: 0, whenDown: function() {
-      // Player must hold down spacebar for the requisite length of time
-      Player.drone.attemptControl();
+      // press spacebar to start controlling
+      Player.drone.attempting_control = !Player.drone.attempting_control;
     }}
   },
 }
@@ -1956,6 +2016,7 @@ global.onFrame = function(frame, callback) {
   gameplay_frame_callbacks[frame] = callback;
 }
 global.onload = function() {
+  console.log('STUFF:', bg1, bg2, bg1.ctx, bg2.ctx)
   environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
