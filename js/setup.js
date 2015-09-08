@@ -46,6 +46,7 @@ var Camera = {
     global.bg1.moveBy(p);
     global.bg2.moveBy(p);
     global.stage.moveBy(p);
+    environment.redraw_bg = true;
   },
 
   focusOnPlayerDrone: function() {
