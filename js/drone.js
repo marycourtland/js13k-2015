@@ -11,7 +11,7 @@ var Drone = function(p) {
   this.rpm_scale = 0.83;
   this.control_t0 = 0;
   this.control_signal_target = null;
-  this.attempting_control = false;
+  this.attempting_control = true;
 
   this.rpm_scale = 0.83; // starting value
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
