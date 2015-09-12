@@ -27,7 +27,7 @@ global.onload = function() {
   Player.drone.controlFull(p);
 
 
-  addToLoop('background', [Player]);
+  addToLoop('background', [Events, Player]);
 
   addToLoop('background', environment.buildings)
 
@@ -44,8 +44,7 @@ global.onload = function() {
 
   addToLoop('foreground2', [
     environment,
-    lightning,
-    wind
+    lightning
   ]);
 
   addToLoop('overlay', [Camera, Hud]);
@@ -54,9 +53,7 @@ global.onload = function() {
     b.prepopulate();
   });
 
-  scheduleEvent(5, function() {
-    wind.startGust(xy(8, 10))
-  })
   
   startGame();
 };
+

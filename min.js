@@ -215,8 +215,8 @@ var draw = {
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(20,20) // pixels -> game units conversion
-, game_size = xy((global.innerWidth - 20)/game_scale.x, 30)
+var game_scale = xy(30,30) // pixels -> game units conversion
+, game_size = xy((global.innerWidth - 20)/game_scale.x, (global.innerHeight / game_scale.y))
 , camera_margin = xy(4, 4)
 , units_per_meter = 2 // for realistic size conversions
 
@@ -263,6 +263,8 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 , lightning_integrity_decrease = 0.3 // OUCH!
 
 // Wind
+, wind_probability = 1/100
+, wind_storm_probability = 1/30 // `nb unused currently
 , wind_influence_distance = 1
 
 // People
@@ -373,6 +375,7 @@ else if (scheme === 2) {
   , wind_colors = [
       // color, linewidth, alpha
       ['#ddd', 0.3, 0.05],
+      // ['#ddd', 0.2, 0.05],
       ['#fff', 0.1, 0.05]
     ]
 
@@ -381,7 +384,7 @@ else if (scheme === 2) {
 
 // `crunch remove this from the css I suppose
 $("#game-message").style.color = hud_text;
-
+$("body").style.color = environment_color;
 // SETUP =============================================================
 
 
@@ -431,6 +434,7 @@ var Camera = {
 
   moveBy: function(p) {
     game_origin = vec_add(game_origin, p);
+    global.fader.moveBy(p);
     global.bg1.moveBy(p);
     global.bg2.moveBy(p);
     global.stage.moveBy(p);
@@ -1581,6 +1585,34 @@ var Player = {
   },
 }
 
+
+// Input events
+// `crunch: these listeners are similar
+
+var keys_down = {};
+
+window.addEventListener("keydown", function(event) {
+
+  var input = Player.inputControlMap[event.which];
+  if (input) {
+    event.preventDefault();
+    input.isDown = 1;
+    if ((!(event.which in keys_down) || !keys_down[event.which]) && typeof input.onDown === 'function') {
+      input.onDown();
+    }
+  }
+  keys_down[event.which] = true;
+});
+
+window.addEventListener("keyup", function(event) {
+  var input = Player.inputControlMap[event.which];
+  if (input) {
+    event.preventDefault();
+    input.isDown = 0;
+    if (typeof input.onUp === 'function') { input.onUp(); }
+  }
+  keys_down[event.which] = false;
+});
 // LIGHTNING  ========================================================
 // `experiment
 lightning = {
@@ -1698,40 +1730,33 @@ lightning = {
   }
 
 }
-global.wind = {
-  pts: [],
-  remaining_propagations: 0,
+var Wind = function() {
+  // state vars
+  this.remaining_propagations = 0;
+  this.curl = 0;
+  this.previous_angle = 0;
+  this.next_curl_dir = 1;
+  this.total_angle = 0;
 
-  slowness: 1,
+  // Data about  the path it'll take
+  this.slowness = 1;
+  this.curl_frequency = 10;
+  this.curl_amplitude = 0.1;
+  this.propagation_length = 1;
+  this.num_propagations = [50, 60];
+  this.visible_gust_length = 6;
+  this.starting_angles = [0, pi/16, -pi/16];
+  this.angle_window = [-pi/4, pi/4];
+  this.height_window = [environment.ground.y0, game_size.y - 4];
 
-  curl: 0,
-  curl_frequency: 10,
-  previous_angle: 0,
-  curl_amplitude: 0.1,
-  propagation_length: 1,
-  num_propagations: [50, 60],
-  angle_window: [-pi/4, pi/4],
-  height_window: [environment.ground.y0, game_size.y - 4],
-  next_curl_dir: 1,
+  this.pts = [];
+  this.bezier_control_fraction = 0.18;
+  this.bezier_controls = {};
+}
 
-  curl: 0,
-  curl_frequency: 10,
-  previous_angle: 0,
-  curl_amplitude: 0.1,
-  propagation_length: 1,
-
-  total_angle: 0,
-
-  starting_angles: [0, pi],
-  starting_angles: [0],
-
-  visible_gust_length: 6,
-
-  bezier_control_fraction: 0.18,
-  bezier_controls: {},
-
+Wind.prototype = {
   startGust: function(origin) {
-    // Random walk in a general direction (rightwards, for now - `temp)
+    // this is an init function
     this.pts = [origin];
     this.bezier_controls = {};
     this.curl = 0;
@@ -1740,9 +1765,11 @@ global.wind = {
     this.total_angle = 0;
     this.propagation_frames = -1;
     this.next_curl_dir = rnd_choice([1, -1]);
+    addToLoop('foreground2', [this]);
   },
 
   influenceDrone: function() {
+    if (this.destroyed) { return; }
     if (this.pts.length < 2) { return; } // `todo: maybe i want to limit this to < 3 because of the rendering
     for (var i = this.getStart() - 1; i < this.pts.length - 2; i++) {
       var dp = cart2polar(vec_subtract(Player.drone.p_drawn, this.pts[i]));
@@ -1752,10 +1779,9 @@ global.wind = {
     }
   },
 
-  reset: function() {
-  },
-
   tick: function() {
+    if (this.destroyed) { return; }
+
     // `todo: modulate speed?
     this.propagation_frames += 1;
     if (this.propagation_frames % this.slowness !== 0) { return; }
@@ -1790,9 +1816,13 @@ global.wind = {
       this.previous_angle = propagation.th;
       this.total_angle += this.previous_angle;
       this.remaining_propagations -= 1;
+
+      this.influenceDrone();
+    }
+    else {
+      this.destroy();
     }
 
-    this.influenceDrone();
   },
 
   calculateNextControlPoint: function() {
@@ -1815,18 +1845,13 @@ global.wind = {
       this.bezier_controls[n] = this.curl > 0 ? [c1, c2] : [c2, c1];
     }
   },
-
-  // `crunch not sure how much this is used
-  last: function() {
-    if (this.pts.length < 1) { return null; }
-    return this.pts[this.pts.length - 1]
-  },
-
   draw: function() {
-    if (this.pts.length < 3) { return; }
+    if (this.destroyed) { return; }
+    if (this.pts && this.pts.length < 3) { return; }
 
     var pts = this.pts;
     var controls = this.bezier_controls;
+    var wind = this;
 
     wind_colors.forEach(function(data) {
       draw.do(windlayer.ctx, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2], lineCap:'round'}), function() {
@@ -1853,7 +1878,22 @@ global.wind = {
       start = Math.floor(this.pts.length - 1 - this.remaining_propagations);
     }
     return start;
+  },
+
+  // `crunch not sure how much this is used
+  last: function() {
+    if (this.pts.length < 1) { return null; }
+    return this.pts[this.pts.length - 1]
+  },
+
+  destroy: function() {
+    // don't leave memory tied up at the end
+    delete this.pts;
+    delete this.bezier_controls;
+    loopDestroy(this);
+    this.destroyed = true;
   }
+
 }
 
 // ITEMS ============================================================
@@ -2066,32 +2106,32 @@ var Hud = {
 
 
 // GAME EVENTS =======================================================
-// `crunch: these listeners are similar
 
-var keys_down = {};
+var Events = {
+  tick: function() {
+    debug('Event tick')
 
-window.addEventListener("keydown", function(event) {
+    if (probability(wind_probability)) {
+      var p = xy(
+        game_origin.x - 1,
+        bounds(Player.drone.p_drawn.y + rnds(-10, 10), [environment.ground.y0 + 2, game_size.y - 2])
+      );
 
-  var input = Player.inputControlMap[event.which];
-  if (input) {
-    event.preventDefault();
-    input.isDown = 1;
-    if ((!(event.which in keys_down) || !keys_down[event.which]) && typeof input.onDown === 'function') {
-      input.onDown();
+      debug('p:', p);
+      (new Wind()).startGust(p);
     }
   }
-  keys_down[event.which] = true;
-});
+}
 
-window.addEventListener("keyup", function(event) {
-  var input = Player.inputControlMap[event.which];
-  if (input) {
-    event.preventDefault();
-    input.isDown = 0;
-    if (typeof input.onUp === 'function') { input.onUp(); }
-  }
-  keys_down[event.which] = false;
-});
+  // scheduleEvent(5, function() {
+  //   (new Wind()).startGust(xy(8, 10));
+  // })
+  // scheduleEvent(30, function() {
+  //   (new Wind()).startGust(xy(4, 20));
+  // })
+  // scheduleEvent(60, function() {
+  //   (new Wind()).startGust(xy(15, 15));
+  // })
 // GAME LOOP =========================================================
 
 global.object_groups = {
@@ -2247,7 +2287,7 @@ global.onload = function() {
   Player.drone.controlFull(p);
 
 
-  addToLoop('background', [Player]);
+  addToLoop('background', [Events, Player]);
 
   addToLoop('background', environment.buildings)
 
@@ -2264,8 +2304,7 @@ global.onload = function() {
 
   addToLoop('foreground2', [
     environment,
-    lightning,
-    wind
+    lightning
   ]);
 
   addToLoop('overlay', [Camera, Hud]);
@@ -2274,12 +2313,11 @@ global.onload = function() {
     b.prepopulate();
   });
 
-  scheduleEvent(5, function() {
-    wind.startGust(xy(8, 10))
-  })
   
   startGame();
 };
+
+
 // Purpose of this thing is to debug the drone movement
 // it will not go in final game
 

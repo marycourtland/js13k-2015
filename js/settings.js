@@ -1,8 +1,8 @@
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(20,20) // pixels -> game units conversion
-, game_size = xy((global.innerWidth - 20)/game_scale.x, 30)
+var game_scale = xy(30,30) // pixels -> game units conversion
+, game_size = xy((global.innerWidth - 20)/game_scale.x, (global.innerHeight / game_scale.y))
 , camera_margin = xy(4, 4)
 , units_per_meter = 2 // for realistic size conversions
 
@@ -49,6 +49,8 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 , lightning_integrity_decrease = 0.3 // OUCH!
 
 // Wind
+, wind_probability = 1/100
+, wind_storm_probability = 1/30 // `nb unused currently
 , wind_influence_distance = 1
 
 // People
@@ -132,7 +134,11 @@ if (scheme === 1) {
 
 else if (scheme === 2) {
   var environment_color = '#1b1b1b'
-  , backgroundGradient = [[1.0, '#777788'], [0, '#888888']]
+  , backgroundGradient = [
+      [1.0, '#777788'],
+      [0.4, '#999999'],
+      [0, '#cccccc']
+    ]
   , awesome_glow_color = '#fff'
 
   , tower_color1 = '#666366'
@@ -159,6 +165,7 @@ else if (scheme === 2) {
   , wind_colors = [
       // color, linewidth, alpha
       ['#ddd', 0.3, 0.05],
+      // ['#ddd', 0.2, 0.05],
       ['#fff', 0.1, 0.05]
     ]
 
@@ -167,3 +174,4 @@ else if (scheme === 2) {
 
 // `crunch remove this from the css I suppose
 $("#game-message").style.color = hud_text;
+$("body").style.color = environment_color;

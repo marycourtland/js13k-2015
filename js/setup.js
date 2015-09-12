@@ -47,6 +47,7 @@ var Camera = {
 
   moveBy: function(p) {
     game_origin = vec_add(game_origin, p);
+    global.fader.moveBy(p);
     global.bg1.moveBy(p);
     global.bg2.moveBy(p);
     global.stage.moveBy(p);
