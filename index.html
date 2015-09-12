@@ -2,17 +2,21 @@
 <html>
   <style>
     body { margin:0; font: 8pt monospace; }
-    #game-layers { position: relative; margin-bottom: 1rem;}
+    #game-layers { position: relative; margin-bottom: 1rem; background-color: black; }
     #game-layers canvas { position: absolute; top:0; left:0; }
     #game-message { position: absolute; top: 10px; left: 20px; color: #abb;}
     #info { margin-left: 20px; float:left; margin: 1rem; }
+    #game_wind { display: block !important; }
+    #fader { display: none; }
   </style>
   <body>
     <div id="game-layers">
+      <canvas id="fader"></canvas>
       <canvas id="game_background"></canvas>
       <canvas id="game_background1"></canvas>
       <canvas id="game_background2"></canvas>
       <canvas id="game_stage"></canvas>
+      <canvas id="game_wind"></canvas>
       <canvas id="game_overlay"></canvas>
     </div>
     <div id="game-message"></div>

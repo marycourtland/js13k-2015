@@ -156,7 +156,3 @@ else if (scheme === 2) {
 
 // `crunch remove this from the css I suppose
 $("#game-message").style.color = hud_text;
-
-// `temp easter egg :)
-var dancetime = !!window.location.search.match(/dancetime=true/);
-

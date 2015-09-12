@@ -41,19 +41,6 @@ lightning = {
     })
   },
 
-  // original algorithm - random walk
-  // `nb - this is not used anymore! So I guess it's `temp
-  regenerate_randomwalk: function() {
-    // Pick an origin point in the sky and random walk downwards
-    var x = rnds(game_size.x + game_origin.x), y = game_size.y;
-    this.pts = [xy(x, y)];
-    var p = 0;
-    while (y > environment.ground.yAt(x)) {
-      x += rnds(-0.4, 0.4);
-      y -= rnds(0.5, 1);
-      this.pts.push(xy(x, y));
-    }
-  },
 
   strikeDrone: function() {
     this.target = Player.drone;

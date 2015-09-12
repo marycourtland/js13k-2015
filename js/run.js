@@ -1,5 +1,4 @@
 global.onload = function() {
-  console.log('STUFF:', bg1, bg2, bg1.ctx, bg2.ctx)
   environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
@@ -33,19 +32,20 @@ global.onload = function() {
   addToLoop('background', environment.buildings)
 
   addToLoop('foreground1', [
-      battery1,
-      battery2,
       Player.drone,
       Player.drone.person,
       p1,
       p2,
       p3,
-      target
+      target,
+      battery1,
+      battery2,
   ]);
 
   addToLoop('foreground2', [
     environment,
-    lightning
+    lightning,
+    wind
   ]);
 
   addToLoop('overlay', [Camera, Hud]);
@@ -53,6 +53,10 @@ global.onload = function() {
   environment.buildings.forEach(function(b) {
     b.prepopulate();
   });
+
+  scheduleEvent(5, function() {
+    wind.startGust(xy(20, 10))
+  })
   
   startGame();
 };

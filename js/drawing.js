@@ -33,6 +33,17 @@ var draw = {
     ctx.clearRect(p0.x, p0.y, p1.x - p0.x, p1.y - p0.y);
   },
 
+  clrp: function(ctx, p0, p1, alpha) {
+    // props to: http://stackoverflow.com/questions/16776665/canvas-clearrect-with-alpha
+    this.clr(global.fader.ctx, p0, p1);
+    var a = 3;
+    global.fader.ctx.globalAlpha = alpha;
+    global.fader.ctx.drawImage(ctx.canvas, 0, 0, global.fader.ctx.canvas.width/game_scale.x, global.fader.ctx.canvas.height/game_scale.y);
+    this.clr(ctx, p0, p1);
+    var a = 3;
+    ctx.drawImage(global.fader.canvas, 0, 0, ctx.canvas.width/game_scale.x, ctx.canvas.height/game_scale.y);
+  },
+
   // Fill
   f: function(ctx, params) {
     params = params || this.shapeStyle("#fff");
@@ -73,6 +84,7 @@ var draw = {
   },
 
   // Bezier
+  // `crunch: the only time beziers are used, this function isn't called...
   b: function(ctx, p0, p1, c0, c1, params) {
     params = params || this.lineStyle("#fff");
     this.do(ctx, params, function() {

@@ -12,6 +12,9 @@ var environment = {
 
   reset: function() {
     stage.clear();
+    overlay.clear();
+    windlayer.clearPartial(0.95);
+
 
     if (this.redraw_bg || gameplay_frame === 0) {
       bg2.clear();
@@ -42,9 +45,6 @@ var environment = {
   },
 
   drawTower: function(tower) {
-    if (dancetime && probability(0.3)) {
-      tower.h += rnds(-0.2, 0.2)
-    }
     var x1 = tower.x - tower.w/2;
     var x2 = tower.x + tower.w/2;
     var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);

@@ -222,6 +222,7 @@ var Drone = function(p) {
   }
 
   this.startTiltOffset = function() {
+    if (this.p.y < environment.ground.y0 + 1) { return; }
     this.offsets[gameplay_frame] = tiltOffset();
   }
 

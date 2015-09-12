@@ -37,6 +37,10 @@ var global = window
 , vec_add = function(p1, p2) {
     return xy(p1.x + p2.x, p1.y + p2.y);
   }
+, vec_subtract = function(p1, p2) {
+  // `todo `crunch: not sure if i'll use this function more than once
+  return xy(p1.x - p2.x, p1.y - p2.y);
+}
 , vec_dot = function(p1, p2) {
     // `CRUNCH: there's a lot of stuff that could make use of this
     return xy(p1.x * p2.x, p1.y * p2.y);
@@ -48,6 +52,12 @@ var global = window
     return xy(
       p.r * cos(p.th),
       p.r * sin(p.th)
+    )
+  }
+, cart2polar = function(p) { // `crunch not sure this is being used
+    return rth(
+      Math.sqrt(p.x*p.x + p.y*p.y),
+      Math.atan2(p.y, p.x)
     )
   }
 , interpolate = function(x, p1, p2) { // Linear
@@ -130,6 +140,17 @@ var draw = {
     ctx.clearRect(p0.x, p0.y, p1.x - p0.x, p1.y - p0.y);
   },
 
+  clrp: function(ctx, p0, p1, alpha) {
+    // props to: http://stackoverflow.com/questions/16776665/canvas-clearrect-with-alpha
+    this.clr(global.fader.ctx, p0, p1);
+    var a = 3;
+    global.fader.ctx.globalAlpha = alpha;
+    global.fader.ctx.drawImage(ctx.canvas, 0, 0, global.fader.ctx.canvas.width/game_scale.x, global.fader.ctx.canvas.height/game_scale.y);
+    this.clr(ctx, p0, p1);
+    var a = 3;
+    ctx.drawImage(global.fader.canvas, 0, 0, ctx.canvas.width/game_scale.x, ctx.canvas.height/game_scale.y);
+  },
+
   // Fill
   f: function(ctx, params) {
     params = params || this.shapeStyle("#fff");
@@ -170,6 +191,7 @@ var draw = {
   },
 
   // Bezier
+  // `crunch: the only time beziers are used, this function isn't called...
   b: function(ctx, p0, p1, c0, c1, params) {
     params = params || this.lineStyle("#fff");
     this.do(ctx, params, function() {
@@ -349,10 +371,6 @@ else if (scheme === 2) {
 // `crunch remove this from the css I suppose
 $("#game-message").style.color = hud_text;
 
-// `temp easter egg :)
-var dancetime = !!window.location.search.match(/dancetime=true/);
-
-
 // SETUP =============================================================
 
 
@@ -373,6 +391,10 @@ function Layer(selector, size, scale) {
 
   this.clear = function() {
     draw.clr(this.ctx, this.origin, xy(this.origin.x + this.size.x, this.origin.y + this.size.y));
+  }
+
+  this.clearPartial = function(alpha) {
+    draw.clrp(this.ctx, this.origin, xy(this.origin.x + this.size.x, this.origin.y + this.size.y), alpha);
   }
 
   this.moveBy = function(p) {
@@ -401,6 +423,8 @@ var Camera = {
     global.bg1.moveBy(p);
     global.bg2.moveBy(p);
     global.stage.moveBy(p);
+    global.windlayer.moveBy(p);
+    environment.redraw_bg = true;
   },
 
   focusOnPlayerDrone: function() {
@@ -412,13 +436,17 @@ var Camera = {
 
 global.game_origin = xy(0, 0);
 
+global.fader = new Layer("#fader", game_size, game_scale);
+
 global.bg1 = new Layer("#game_background1", scale(game_size, 1/0.9), scale(game_scale, 0.9));
 global.bg2 = new Layer("#game_background2", scale(game_size, 1/0.95), scale(game_scale, 0.95));
 global.stage = new Layer("#game_stage", game_size, game_scale);
+global.windlayer = new Layer("#game_wind", game_size, game_scale); // this one will fade out slowly
 global.overlay = new Layer("#game_overlay", game_size, game_scale);
 
 // this is the container for all the layers
 $("#game-layers").style.height = (game_size.y * game_scale.y) + "px";
+
 
 // `crunch: that constructor is a mess, ha!
 
@@ -574,25 +602,33 @@ var environment = {
   towers: [], // Towers in the background skyline represented by [x, width, height]
   buildings: [], // buildings in the foreground which hold people
 
+  redraw_bg: false,
 
   // Game loop
 
   reset: function() {
-    bg2.clear();
     stage.clear();
+    overlay.clear();
+    windlayer.clearPartial(0.95);
 
-    // Background
-    // (even though this is drawing-related, it needs to come before anything else)
-    var grd = bg1.ctx.createLinearGradient(0, 0, 0, bg1.size.y * 1.2);
-    backgroundGradient.forEach(function(params) {
-      grd.addColorStop.apply(grd, params);
-    })
-    draw.r(bg1.ctx, bg1.origin, xy(bg1.origin.x + bg1.size.x, bg1.origin.y + bg1.size.y), draw.shapeStyle(grd));
 
-    // Draw towers (decorative only for now)
-    // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
-    this.towers.forEach(this.drawTower);
+    if (this.redraw_bg || gameplay_frame === 0) {
+      bg2.clear();
 
+      // Background
+      // (even though this is drawing-related, it needs to come before anything else)
+      var grd = bg1.ctx.createLinearGradient(0, 0, 0, bg1.size.y * 1.2);
+      backgroundGradient.forEach(function(params) {
+        grd.addColorStop.apply(grd, params);
+      })
+      draw.r(bg1.ctx, bg1.origin, xy(bg1.origin.x + bg1.size.x, bg1.origin.y + bg1.size.y), draw.shapeStyle(grd));
+
+      // Draw towers (decorative only for now)
+      // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
+      this.towers.forEach(this.drawTower);
+    }
+
+    this.redraw_bg = false;
   },
 
 
@@ -605,9 +641,6 @@ var environment = {
   },
 
   drawTower: function(tower) {
-    if (dancetime && probability(0.3)) {
-      tower.h += rnds(-0.2, 0.2)
-    }
     var x1 = tower.x - tower.w/2;
     var x2 = tower.x + tower.w/2;
     var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
@@ -625,11 +658,8 @@ var environment = {
       )
     }
     if (tower.slant) {
-      if (dancetime) {
-        tower.slant_ratio += rnds(-0.1, 0.1)
-      }
-      var h = y0 + tower.h - 0.2;
-      var r1 = tower.w/2;
+      var h = y0 + tower.h - 0.1;
+      var r1 = 0.9 * tower.w/2;
       var r2 = r1 * tower.slant_ratio;
       var p0 = xy(tower.x, y0 + tower.h)
 
@@ -1398,6 +1428,7 @@ var Drone = function(p) {
   }
 
   this.startTiltOffset = function() {
+    if (this.p.y < environment.ground.y0 + 1) { return; }
     this.offsets[gameplay_frame] = tiltOffset();
   }
 
@@ -1566,19 +1597,6 @@ lightning = {
     })
   },
 
-  // original algorithm - random walk
-  // `nb - this is not used anymore! So I guess it's `temp
-  regenerate_randomwalk: function() {
-    // Pick an origin point in the sky and random walk downwards
-    var x = rnds(game_size.x + game_origin.x), y = game_size.y;
-    this.pts = [xy(x, y)];
-    var p = 0;
-    while (y > environment.ground.yAt(x)) {
-      x += rnds(-0.4, 0.4);
-      y -= rnds(0.5, 1);
-      this.pts.push(xy(x, y));
-    }
-  },
 
   strikeDrone: function() {
     this.target = Player.drone;
@@ -1653,6 +1671,166 @@ lightning = {
   }
 
 }
+global.wind = {
+  pts: [],
+  remaining_propagations: 0,
+
+  slowness: 1,
+
+  curl: 0,
+  curl_frequency: 10,
+  previous_angle: 0,
+  curl_amplitude: 0.1,
+  propagation_length: 1,
+  num_propagations: [50, 60],
+  angle_window: [-pi/4, pi/4],
+  height_window: [environment.ground.y0, game_size.y - 4],
+
+  curl: 0,
+  curl_frequency: 5,
+  previous_angle: 0,
+  curl_amplitude: 1,
+  propagation_length: 1,
+
+  total_angle: 0,
+
+  starting_angles: [0, pi],
+  starting_angles: [0],
+
+  visible_gust_length: 6,
+
+  bezier_control_fraction: 0.18,
+  bezier_controls: {},
+
+  reset: function() {
+  },
+
+  tick: function() {
+    // `todo: modulate speed?
+    this.propagation_frames += 1;
+    if (this.propagation_frames % this.slowness !== 0) { return; }
+
+    if (this.remaining_propagations > 0 && this.pts.length > 0) {
+      // redo the curl every few frames
+
+      // `crunch
+      var min_curl = (this.total_angle < this.angle_window[0] || this.last().y < this.height_window[0]) ? 0 : -this.curl_amplitude;
+      var max_curl = (this.total_angle > this.angle_window[1] || this.last().y > this.height_window[1]) ? 0 : this.curl_amplitude;
+      if ((gameplay_frame * this.slowness) % this.curl_frequency === 0) {
+        this.curl = rnds(min_curl, max_curl);
+      }
+      else if (this.last().y < this.height_window[0]) {
+        this.curl = rnds(min_curl, 0);
+      }
+      else if (this.last().y > this.height_window[1]) {
+        this.curl = rnds(0, max_curl);
+      }
+
+      var propagation = rth(this.propagation_length, this.previous_angle + this.curl);
+      this.pts.push(vec_add(
+        this.last(),
+        polar2cart(propagation)
+      ));
+
+      this.calculateNextControlPoint();
+
+      this.previous_angle = propagation.th;
+      this.total_angle += this.previous_angle;
+      this.remaining_propagations -= 1;
+    }
+  },
+
+  calculateNextControlPoint: function() {
+    // this is used for the drawing. each point has two bezier controls on either side
+    if (this.pts.length < 2) { return; }
+    if (this.pts.length === 2) {
+      this.bezier_controls[0] = [this.pts[0], this.pts[0]]; // meh, it's the first point
+    }
+    else {
+      var n = this.pts.length - 2;
+      var p1 = this.pts[n-1], p2 = this.pts[n], p3 = this.pts[n+1];
+      var dp = vec_subtract(p3, p1);
+      var dprth = cart2polar(dp);
+      var dcontrol = rth(dprth.r * this.bezier_control_fraction * this.curl, dprth.th);
+      var dcontrolxy = polar2cart(dcontrol);
+
+      var c1 = xy(p2.x - dcontrolxy.x, p2.y - dcontrolxy.y);
+      var c2 = xy(p2.x + dcontrolxy.x, p2.y + dcontrolxy.y);
+
+      this.bezier_controls[n] = this.curl > 0 ? [c1, c2] : [c2, c1];
+    }
+  },
+
+  // `crunch not sure how much this is used
+  last: function() {
+    if (this.pts.length < 1) { return null; }
+    return this.pts[this.pts.length - 1]
+  },
+
+  draw: function() {
+    if (this.pts.length < 3) { return; }
+
+    /// `temp control points
+
+    // draw.c(windlayer.ctx, this.bezier_controls[2][1], 0.2, draw.shapeStyle('blue'));
+    // for (var i in this.bezier_controls) {
+    //   var color = (i % 2 === 0) ? 'red' : 'orange';
+    //   draw.c(windlayer.ctx, this.bezier_controls[i][0], 0.1, draw.shapeStyle(color));
+    //   draw.c(windlayer.ctx, this.bezier_controls[i][1], 0.1, draw.shapeStyle(color));
+    // }
+    // this.pts.forEach(function(pt) {
+    //   draw.c(windlayer.ctx, pt, 0.1, draw.shapeStyle('green'));
+    // })
+    
+    ///////////
+
+
+    var colordata = [
+      // color, linewidth, alpha
+      ['#ddd', 0.3, 0.05],
+      // ['#eee', 0.8, 0.05],
+      // ['#eee', 0.6, 0.05],
+      // ['#eee', 0.5, 0.05],
+      // ['#eee', 0.4, 0.05],
+      // ['#eee', 0.3, 0.05],
+      // ['#eee', 0.2, 0.05],
+      ['#fff', 0.1, 0.05]
+    ];
+    var pts = this.pts;
+    var controls = this.bezier_controls;
+    colordata.forEach(function(data) {
+      draw.do(windlayer.ctx, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2], lineCap:'round'}), function() {
+        var start = max(1, pts.length - wind.visible_gust_length);
+        if (wind.remaining_propagations < wind.visible_gust_length) {
+          start = Math.floor(pts.length - 1 - wind.remaining_propagations);
+        }
+        windlayer.ctx.beginPath();
+        windlayer.ctx.moveTo(pts[start - 1].x, pts[start - 1].y);
+        for (var i = start; i < pts.length - 1; i++) {
+
+          var c0 = controls[i-1][1];
+          var c1 = controls[i][0];
+          var p1 = pts[i];
+          windlayer.ctx.bezierCurveTo(c0.x, c0.y, c1.x, c1.y, p1.x, p1.y);
+        }
+        // Note: the last point doesn't get drawn (it doesn't have an associated bezier control yet)
+      })
+    })
+
+  },
+
+  startGust: function(origin) {
+    // Random walk in a general direction (rightwards, for now - `temp)
+    this.pts = [origin];
+    this.bezier_controls = {};
+    this.curl = 0;
+    this.remaining_propagations = rnds.apply(null, this.num_propagations);
+    this.previous_angle = rnd_choice(this.starting_angles);
+    this.total_angle = 0;
+    this.propagation_frames = -1;
+  }
+}
+
 // ITEMS ============================================================
 // ** Parent object
 // ** container must be an actor
@@ -2016,7 +2194,6 @@ global.onFrame = function(frame, callback) {
   gameplay_frame_callbacks[frame] = callback;
 }
 global.onload = function() {
-  console.log('STUFF:', bg1, bg2, bg1.ctx, bg2.ctx)
   environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
@@ -2050,19 +2227,20 @@ global.onload = function() {
   addToLoop('background', environment.buildings)
 
   addToLoop('foreground1', [
-      battery1,
-      battery2,
       Player.drone,
       Player.drone.person,
       p1,
       p2,
       p3,
-      target
+      target,
+      battery1,
+      battery2,
   ]);
 
   addToLoop('foreground2', [
     environment,
-    lightning
+    lightning,
+    wind
   ]);
 
   addToLoop('overlay', [Camera, Hud]);
@@ -2070,6 +2248,10 @@ global.onload = function() {
   environment.buildings.forEach(function(b) {
     b.prepopulate();
   });
+
+  scheduleEvent(5, function() {
+    wind.startGust(xy(20, 10))
+  })
   
   startGame();
 };
