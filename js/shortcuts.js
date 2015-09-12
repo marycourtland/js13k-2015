@@ -37,6 +37,10 @@ var global = window
 , vec_add = function(p1, p2) {
     return xy(p1.x + p2.x, p1.y + p2.y);
   }
+, vec_subtract = function(p1, p2) {
+  // `todo `crunch: not sure if i'll use this function more than once
+  return xy(p1.x - p2.x, p1.y - p2.y);
+}
 , vec_dot = function(p1, p2) {
     // `CRUNCH: there's a lot of stuff that could make use of this
     return xy(p1.x * p2.x, p1.y * p2.y);
@@ -48,6 +52,12 @@ var global = window
     return xy(
       p.r * cos(p.th),
       p.r * sin(p.th)
+    )
+  }
+, cart2polar = function(p) { // `crunch not sure this is being used
+    return rth(
+      Math.sqrt(p.x*p.x + p.y*p.y),
+      Math.atan2(p.y, p.x)
     )
   }
 , interpolate = function(x, p1, p2) { // Linear

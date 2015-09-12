@@ -39,7 +39,7 @@ var Hud = {
     integrity: function() {
       // `CRUNCH: this is essentially same as the energy meter. Just the icon adjustment is off a bit
       var p = vec_add(vec_add(overlay.origin, overlay.size), integrity_meter_position);
-      Player.drone.drawRepr(vec_add(p, xy(0, 0.3)), 2, draw.shapeStyle(hud_color), {ctx: overlay.ctx});
+      Player.drone.drawRepr(vec_add(p, xy(0, 0.3)), 2, draw.shapeStyle(hud_color), {ctx: overlay.ctx, freeze: true});
 
       p = vec_add(p, xy(1.5, 0.1));
 

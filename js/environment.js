@@ -6,25 +6,33 @@ var environment = {
   towers: [], // Towers in the background skyline represented by [x, width, height]
   buildings: [], // buildings in the foreground which hold people
 
+  redraw_bg: false,
 
   // Game loop
 
   reset: function() {
-    bg2.clear();
     stage.clear();
+    overlay.clear();
+    windlayer.clearPartial(0.95);
 
-    // Background
-    // (even though this is drawing-related, it needs to come before anything else)
-    var grd = bg1.ctx.createLinearGradient(0, 0, 0, bg1.size.y * 1.2);
-    backgroundGradient.forEach(function(params) {
-      grd.addColorStop.apply(grd, params);
-    })
-    draw.r(bg1.ctx, bg1.origin, xy(bg1.origin.x + bg1.size.x, bg1.origin.y + bg1.size.y), draw.shapeStyle(grd));
 
-    // Draw towers (decorative only for now)
-    // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
-    this.towers.forEach(this.drawTower);
+    if (this.redraw_bg || gameplay_frame === 0) {
+      bg2.clear();
 
+      // Background
+      // (even though this is drawing-related, it needs to come before anything else)
+      var grd = bg1.ctx.createLinearGradient(0, 0, 0, bg1.size.y * 1.2);
+      backgroundGradient.forEach(function(params) {
+        grd.addColorStop.apply(grd, params);
+      })
+      draw.r(bg1.ctx, bg1.origin, xy(bg1.origin.x + bg1.size.x, bg1.origin.y + bg1.size.y), draw.shapeStyle(grd));
+
+      // Draw towers (decorative only for now)
+      // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
+      this.towers.forEach(this.drawTower);
+    }
+
+    this.redraw_bg = false;
   },
 
 
@@ -37,9 +45,6 @@ var environment = {
   },
 
   drawTower: function(tower) {
-    if (dancetime && probability(0.3)) {
-      tower.h += rnds(-0.2, 0.2)
-    }
     var x1 = tower.x - tower.w/2;
     var x2 = tower.x + tower.w/2;
     var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
@@ -57,11 +62,8 @@ var environment = {
       )
     }
     if (tower.slant) {
-      if (dancetime) {
-        tower.slant_ratio += rnds(-0.1, 0.1)
-      }
-      var h = y0 + tower.h - 0.2;
-      var r1 = tower.w/2;
+      var h = y0 + tower.h - 0.1;
+      var r1 = 0.9 * tower.w/2;
       var r2 = r1 * tower.slant_ratio;
       var p0 = xy(tower.x, y0 + tower.h)
 

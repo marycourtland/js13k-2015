@@ -37,6 +37,10 @@ var global = window
 , vec_add = function(p1, p2) {
     return xy(p1.x + p2.x, p1.y + p2.y);
   }
+, vec_subtract = function(p1, p2) {
+  // `todo `crunch: not sure if i'll use this function more than once
+  return xy(p1.x - p2.x, p1.y - p2.y);
+}
 , vec_dot = function(p1, p2) {
     // `CRUNCH: there's a lot of stuff that could make use of this
     return xy(p1.x * p2.x, p1.y * p2.y);
@@ -48,6 +52,12 @@ var global = window
     return xy(
       p.r * cos(p.th),
       p.r * sin(p.th)
+    )
+  }
+, cart2polar = function(p) { // `crunch not sure this is being used
+    return rth(
+      Math.sqrt(p.x*p.x + p.y*p.y),
+      Math.atan2(p.y, p.x)
     )
   }
 , interpolate = function(x, p1, p2) { // Linear
@@ -130,6 +140,17 @@ var draw = {
     ctx.clearRect(p0.x, p0.y, p1.x - p0.x, p1.y - p0.y);
   },
 
+  clrp: function(ctx, p0, p1, alpha) {
+    // props to: http://stackoverflow.com/questions/16776665/canvas-clearrect-with-alpha
+    this.clr(global.fader.ctx, p0, p1);
+    var a = 3;
+    global.fader.ctx.globalAlpha = alpha;
+    global.fader.ctx.drawImage(ctx.canvas, 0, 0, global.fader.ctx.canvas.width/game_scale.x, global.fader.ctx.canvas.height/game_scale.y);
+    this.clr(ctx, p0, p1);
+    var a = 3;
+    ctx.drawImage(global.fader.canvas, 0, 0, ctx.canvas.width/game_scale.x, ctx.canvas.height/game_scale.y);
+  },
+
   // Fill
   f: function(ctx, params) {
     params = params || this.shapeStyle("#fff");
@@ -170,6 +191,7 @@ var draw = {
   },
 
   // Bezier
+  // `crunch: the only time beziers are used, this function isn't called...
   b: function(ctx, p0, p1, c0, c1, params) {
     params = params || this.lineStyle("#fff");
     this.do(ctx, params, function() {
@@ -194,91 +216,94 @@ var draw = {
 
 // Game and camera settings
 var game_scale = xy(20,20) // pixels -> game units conversion
-,   game_size = xy((global.innerWidth - 20)/game_scale.x, 30)
-,   camera_margin = xy(4, 4)
-,   units_per_meter = 2 // for realistic size conversions
+, game_size = xy((global.innerWidth - 20)/game_scale.x, 30)
+, camera_margin = xy(4, 4)
+, units_per_meter = 2 // for realistic size conversions
 
-,   world_size = [-100, 1000] // Horizontal bounds
-,   world_buffer = 10
+, world_size = [-100, 1000] // Horizontal bounds
+, world_buffer = 10
 
 
 // Environment
-,   num_tower_clumps = 60
-,   num_towers_per_clump = 10
-,   tower_clump_width = 80
-,   tower_dome_probability = 0.1
-,   tower_slant_probability = 0.1
+, num_tower_clumps = 60
+, num_towers_per_clump = 10
+, tower_clump_width = 80
+, tower_dome_probability = 0.1
+, tower_slant_probability = 0.1
 
 // Buildings
-,   door_size = xy(0.7, 1.2) // slightly larger than person
-,   person_frequency = 0.15 // people per game unit. not evenly distributed
-,   avg_people_per_building = 4 // AVERAGE
-,   avg_building_size = xy(10, 10)
-,   people_comeout_window = 8
+, door_size = xy(0.7, 1.2) // slightly larger than person
+, person_frequency = 0.15 // people per game unit. not evenly distributed
+, avg_people_per_building = 4 // AVERAGE
+, avg_building_size = xy(10, 10)
+, people_comeout_window = 8
 
 
 // Dynamics
 // *** Gravity estimate is very sensitive to FPS measurement
-,   min_dynamics_frame = 5
-,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / bounds(avg_fps * avg_fps, [0, 1000])); } // 9.8 m/s^2 translated to units/frame^2
-,   droneTiltAccel = 0.001
-,   dronePowerAccel = 0.0001
-,   max_tilt = pi/4
-,   tilt_decay = 0.1
+, min_dynamics_frame = 5
+, gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / bounds(avg_fps * avg_fps, [0, 1000])); } // 9.8 m/s^2 translated to units/frame^2
+, droneTiltAccel = 0.001
+, dronePowerAccel = 0.0001
+, max_tilt = pi/4
+, tilt_decay = 0.1
 
-,   tiltOffset = function(depth) {
-      // `todo: customize this function with depth; then have successive keydown events (i.e. key being held down) increase the depth
-      return function(t) {
-        t += 1; // so that the zero thingy isn't triggered
-        t *= 0.2; // for scaling
-        return -max(0, 1.5*Math.exp(-t/2)*t/1.5);
-      }
+, tiltOffset = function(depth) {
+    // `todo: customize this function with depth; then have successive keydown events (i.e. key being held down) increase the depth
+    return function(t) {
+      t += 1; // so that the zero thingy isn't triggered
+      t *= 0.2; // for scaling
+      return -max(0, 1.5*Math.exp(-t/2)*t/1.5);
     }
+  }
 
 // Lightning
-,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
-,   lightning_chance_drone = 0.3   // Of each lightning strike, chance that it will hit the drone
-,   lightning_integrity_decrease = 0.3 // OUCH!
+, lightning_chance = 0.001        // Chance that lightning will start on any given frame
+, lightning_chance_drone = 0.3   // Of each lightning strike, chance that it will hit the drone
+, lightning_integrity_decrease = 0.3 // OUCH!
+
+// Wind
+, wind_influence_distance = 1
 
 // People
-,   person_size = xy(0.3, 0.6)
-,   person_speed = 0.3
-,   person_control_rate = 0.05 // rate at which control level increases or drops
-,   min_person_resistance = 2 * person_control_rate
-,   person_interaction_window = 15
-,   interaction_distance = 1
-,   shoot_drone_window = 15
+, person_size = xy(0.3, 0.6)
+, person_speed = 0.3
+, person_control_rate = 0.05 // rate at which control level increases or drops
+, min_person_resistance = 2 * person_control_rate
+, person_interaction_window = 15
+, interaction_distance = 1
+, shoot_drone_window = 15
 
 
 // Drone
-,   drone_body_size = xy(0.3, 0.2)
-,   drone_arm_size = xy(0.4, 0.05) // from center
-,   drone_blade_size = xy(0.5, 0.1)
-,   drone_drain_rate = 0.00005 // energy per frame
-,   drone_low_energy = 0.1
-,   drone_high_energy = 0.9
-,   drone_max_sideways_accel = 0.01
+, drone_body_size = xy(0.3, 0.2)
+, drone_arm_size = xy(0.4, 0.05) // from center
+, drone_blade_size = xy(0.5, 0.1)
+, drone_drain_rate = 0.00005 // energy per frame
+, drone_low_energy = 0.1
+, drone_high_energy = 0.9
+, drone_max_sideways_accel = 0.01
 
 // Bullets
-,   bullet_radius = 0.075
-,   bullet_hit_distance = 0.5
-,   bullet_speed = 1.8
-,   bullet_frequency = 50 // frames between a guard's bullets
-,   bullet_integrity_decrease = 0.05 // how much structural integrity does a bullet disrupt?
+, bullet_radius = 0.075
+, bullet_hit_distance = 0.5
+, bullet_speed = 1.8
+, bullet_frequency = 50 // frames between a guard's bullets
+, bullet_integrity_decrease = 0.05 // how much structural integrity does a bullet disrupt?
 
 // Items
-,   battery_size = {x: 0.5, y: 0.3}
+, battery_size = {x: 0.5, y: 0.3}
 
 
 // Ideas
-,   idea_scale = 0.7
+, idea_scale = 0.7
 
 // HUD - positions are referenced from the upper right corner of game
-,   hud_dial_radius = 1
-,   bar_meter_size = xy(4, 0.5)
-,   energy_meter_position = xy(-12, -1.5)
-,   integrity_meter_position = xy(-20, -1.5)
-,   rpm_meter_position = xy(-3, -1.5)
+, hud_dial_radius = 1
+, bar_meter_size = xy(4, 0.5)
+, energy_meter_position = xy(-12, -1.5)
+, integrity_meter_position = xy(-20, -1.5)
+, rpm_meter_position = xy(-3, -1.5)
 
 ;
 
@@ -287,71 +312,75 @@ var scheme = 2;
 
 if (scheme === 1) {
   var environment_color = '#1b1b1b'
-  ,   backgroundGradient = [
-          // gradient color stops
-          [1.0, '#111320'],
-          [0.85, '#17182a'],
-          [0.7, '#1f2035'],
-          [0.4, '#433b4b'],
-          [0.0, '#a16e4f']
-      ]
-  ,   awesome_glow_color = '#fff'
+  , backgroundGradient = [
+      // gradient color stops
+      [1.0, '#111320'],
+      [0.85, '#17182a'],
+      [0.7, '#1f2035'],
+      [0.4, '#433b4b'],
+      [0.0, '#a16e4f']
+    ]
+  , awesome_glow_color = '#fff'
 
-  ,   tower_color1 = '#111'
-  ,   tower_color2 = '#333'
-  ,   building_color = '#3E373E'
-  ,   door_color = '#776'
+  , tower_color1 = '#111'
+  , tower_color2 = '#333'
+  , building_color = '#3E373E'
+  , door_color = '#776'
 
-  ,   person_color = '#000'
-  ,   controlled_person_color = '#000'
+  , person_color = '#000'
+  , controlled_person_color = '#000'
 
-  ,   drone_color = '#000'
-  ,   drone_signal_color = '#9eb'
+  , drone_color = '#000'
+  , drone_signal_color = '#9eb'
 
-  ,   bullet_color = '#eee'
-  ,   battery_color = "#000"
-  ,   idea_color = "#ddd"
+  , bullet_color = '#eee'
+  , battery_color = "#000"
+  , idea_color = "#ddd"
 
-  ,   hud_color = '#abb'
-  ,   hud_color_dark = '#355'
-  ,   hud_red = '#811'
-  ,   hud_green = '#161'
-  ,   hud_text = '#abb'
+  , hud_color = '#abb'
+  , hud_color_dark = '#355'
+  , hud_red = '#811'
+  , hud_green = '#161'
+  , hud_text = '#abb'
 }
 
 else if (scheme === 2) {
   var environment_color = '#1b1b1b'
-  ,   backgroundGradient = [[1.0, '#777788'], [0, '#888888']]
-  ,   awesome_glow_color = '#fff'
+  , backgroundGradient = [[1.0, '#777788'], [0, '#888888']]
+  , awesome_glow_color = '#fff'
 
-  ,   tower_color1 = '#666366'
-  ,   tower_color2 = '#555255'
-  ,   building_color = '#3E373E'
-  ,   door_color = '#636666'
+  , tower_color1 = '#666366'
+  , tower_color2 = '#555255'
+  , building_color = '#3E373E'
+  , door_color = '#636666'
 
-  ,   person_color = '#000'
-  ,   controlled_person_color = '#000'
+  , person_color = '#000'
+  , controlled_person_color = '#000'
 
-  ,   drone_color = '#000'
-  ,   drone_signal_color = '#9eb'
+  , drone_color = '#000'
+  , drone_signal_color = '#9eb'
 
-  ,   bullet_color = '#eee'
-  ,   battery_color = "#000"
-  ,   idea_color = "#ddd"
+  , bullet_color = '#eee'
+  , battery_color = "#000"
+  , idea_color = "#ddd"
 
-  ,   hud_color = '#445'
-  ,   hud_color_dark = '#aab'
-  ,   hud_red = '#811'
-  ,   hud_green = '#161'
-  ,   hud_text = '#112'
+  , hud_color = '#445'
+  , hud_color_dark = '#aab'
+  , hud_red = '#811'
+  , hud_green = '#161'
+  , hud_text = '#112'
+
+  , wind_colors = [
+      // color, linewidth, alpha
+      ['#ddd', 0.3, 0.05],
+      ['#fff', 0.1, 0.05]
+    ]
+
+  ;
 }
 
 // `crunch remove this from the css I suppose
 $("#game-message").style.color = hud_text;
-
-// `temp easter egg :)
-var dancetime = !!window.location.search.match(/dancetime=true/);
-
 
 // SETUP =============================================================
 
@@ -373,6 +402,10 @@ function Layer(selector, size, scale) {
 
   this.clear = function() {
     draw.clr(this.ctx, this.origin, xy(this.origin.x + this.size.x, this.origin.y + this.size.y));
+  }
+
+  this.clearPartial = function(alpha) {
+    draw.clrp(this.ctx, this.origin, xy(this.origin.x + this.size.x, this.origin.y + this.size.y), alpha);
   }
 
   this.moveBy = function(p) {
@@ -401,6 +434,8 @@ var Camera = {
     global.bg1.moveBy(p);
     global.bg2.moveBy(p);
     global.stage.moveBy(p);
+    global.windlayer.moveBy(p);
+    environment.redraw_bg = true;
   },
 
   focusOnPlayerDrone: function() {
@@ -412,13 +447,17 @@ var Camera = {
 
 global.game_origin = xy(0, 0);
 
+global.fader = new Layer("#fader", game_size, game_scale);
+
 global.bg1 = new Layer("#game_background1", scale(game_size, 1/0.9), scale(game_scale, 0.9));
 global.bg2 = new Layer("#game_background2", scale(game_size, 1/0.95), scale(game_scale, 0.95));
 global.stage = new Layer("#game_stage", game_size, game_scale);
+global.windlayer = new Layer("#game_wind", game_size, game_scale); // this one will fade out slowly
 global.overlay = new Layer("#game_overlay", game_size, game_scale);
 
 // this is the container for all the layers
 $("#game-layers").style.height = (game_size.y * game_scale.y) + "px";
+
 
 // `crunch: that constructor is a mess, ha!
 
@@ -574,25 +613,33 @@ var environment = {
   towers: [], // Towers in the background skyline represented by [x, width, height]
   buildings: [], // buildings in the foreground which hold people
 
+  redraw_bg: false,
 
   // Game loop
 
   reset: function() {
-    bg2.clear();
     stage.clear();
+    overlay.clear();
+    windlayer.clearPartial(0.95);
 
-    // Background
-    // (even though this is drawing-related, it needs to come before anything else)
-    var grd = bg1.ctx.createLinearGradient(0, 0, 0, bg1.size.y * 1.2);
-    backgroundGradient.forEach(function(params) {
-      grd.addColorStop.apply(grd, params);
-    })
-    draw.r(bg1.ctx, bg1.origin, xy(bg1.origin.x + bg1.size.x, bg1.origin.y + bg1.size.y), draw.shapeStyle(grd));
 
-    // Draw towers (decorative only for now)
-    // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
-    this.towers.forEach(this.drawTower);
+    if (this.redraw_bg || gameplay_frame === 0) {
+      bg2.clear();
 
+      // Background
+      // (even though this is drawing-related, it needs to come before anything else)
+      var grd = bg1.ctx.createLinearGradient(0, 0, 0, bg1.size.y * 1.2);
+      backgroundGradient.forEach(function(params) {
+        grd.addColorStop.apply(grd, params);
+      })
+      draw.r(bg1.ctx, bg1.origin, xy(bg1.origin.x + bg1.size.x, bg1.origin.y + bg1.size.y), draw.shapeStyle(grd));
+
+      // Draw towers (decorative only for now)
+      // (subtract 0.5 so that there's no gap betw ground and tower. `temp)
+      this.towers.forEach(this.drawTower);
+    }
+
+    this.redraw_bg = false;
   },
 
 
@@ -605,9 +652,6 @@ var environment = {
   },
 
   drawTower: function(tower) {
-    if (dancetime && probability(0.3)) {
-      tower.h += rnds(-0.2, 0.2)
-    }
     var x1 = tower.x - tower.w/2;
     var x2 = tower.x + tower.w/2;
     var y0 = min(environment.ground.pointAt(x1).y, environment.ground.pointAt(x2).y);
@@ -625,11 +669,8 @@ var environment = {
       )
     }
     if (tower.slant) {
-      if (dancetime) {
-        tower.slant_ratio += rnds(-0.1, 0.1)
-      }
-      var h = y0 + tower.h - 0.2;
-      var r1 = tower.w/2;
+      var h = y0 + tower.h - 0.1;
+      var r1 = 0.9 * tower.w/2;
       var r2 = r1 * tower.slant_ratio;
       var p0 = xy(tower.x, y0 + tower.h)
 
@@ -1193,6 +1234,7 @@ var Drone = function(p) {
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
   this.color = 'black';
   this.tilt = 0; // goes from -pi/2 (left tilt) to pi/2 (right tilt)
+  this.spin = 0;
 
   this.offset = 0; //vertical only, for now
   this.offsets = {}; // map starting frames > offset-computing-functions
@@ -1204,7 +1246,7 @@ var Drone = function(p) {
     // Make sure each property is in its proper bounds
     this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
     this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
-    this.tilt = bounds(this.tilt, [-pi/2, pi/2]);
+    this.tilt = this.spin > 0 ? bounds(this.tilt, [-pi/2, pi/2]) : this.tilt;
     this.energy = bounds(this.energy, [0, 1]);
     this.integrity = bounds(this.integrity, [0, 1]);
   }
@@ -1235,6 +1277,9 @@ var Drone = function(p) {
     this.v = vec_add(this.v, this.getLiftAccel());
 
     // Dynamics
+    this.tilt += this.spin;
+
+    this.spin *= 0.8;
     this.tilt *= 0.9; // decay the tilt
 
     this.v.x *= 0.95; // sideways drag
@@ -1398,9 +1443,22 @@ var Drone = function(p) {
   }
 
   this.startTiltOffset = function() {
+    if (this.p.y < environment.ground.y0 + 1) { return; }
     this.offsets[gameplay_frame] = tiltOffset();
   }
 
+
+  // Environmental effects =====================================================
+
+  this.experienceWind = function(dp, v) {
+    // NOTE: the vectors are in rth format
+    var dth = v.th - dp.th;
+
+    this.spin += 0.1 / dth;
+
+    this.v = vec_add(this.v, polar2cart(rth(0.03*v.r/dp.r, v.th)));
+
+  }
 
   // Controlling people ========================================================
 
@@ -1493,7 +1551,7 @@ Drone.prototype = new Actor();
 // it moves stuff around
 
 var Player = {
-  drone: new Drone(xy(10, 10.05)),
+  drone: new Drone(xy(8.5, 9.5)),
   usingItem: false,
 
   tick: function() {
@@ -1566,19 +1624,6 @@ lightning = {
     })
   },
 
-  // original algorithm - random walk
-  // `nb - this is not used anymore! So I guess it's `temp
-  regenerate_randomwalk: function() {
-    // Pick an origin point in the sky and random walk downwards
-    var x = rnds(game_size.x + game_origin.x), y = game_size.y;
-    this.pts = [xy(x, y)];
-    var p = 0;
-    while (y > environment.ground.yAt(x)) {
-      x += rnds(-0.4, 0.4);
-      y -= rnds(0.5, 1);
-      this.pts.push(xy(x, y));
-    }
-  },
 
   strikeDrone: function() {
     this.target = Player.drone;
@@ -1653,6 +1698,164 @@ lightning = {
   }
 
 }
+global.wind = {
+  pts: [],
+  remaining_propagations: 0,
+
+  slowness: 1,
+
+  curl: 0,
+  curl_frequency: 10,
+  previous_angle: 0,
+  curl_amplitude: 0.1,
+  propagation_length: 1,
+  num_propagations: [50, 60],
+  angle_window: [-pi/4, pi/4],
+  height_window: [environment.ground.y0, game_size.y - 4],
+  next_curl_dir: 1,
+
+  curl: 0,
+  curl_frequency: 10,
+  previous_angle: 0,
+  curl_amplitude: 0.1,
+  propagation_length: 1,
+
+  total_angle: 0,
+
+  starting_angles: [0, pi],
+  starting_angles: [0],
+
+  visible_gust_length: 6,
+
+  bezier_control_fraction: 0.18,
+  bezier_controls: {},
+
+  startGust: function(origin) {
+    // Random walk in a general direction (rightwards, for now - `temp)
+    this.pts = [origin];
+    this.bezier_controls = {};
+    this.curl = 0;
+    this.remaining_propagations = rnds.apply(null, this.num_propagations);
+    this.previous_angle = rnd_choice(this.starting_angles);
+    this.total_angle = 0;
+    this.propagation_frames = -1;
+    this.next_curl_dir = rnd_choice([1, -1]);
+  },
+
+  influenceDrone: function() {
+    if (this.pts.length < 2) { return; } // `todo: maybe i want to limit this to < 3 because of the rendering
+    for (var i = this.getStart() - 1; i < this.pts.length - 2; i++) {
+      var dp = cart2polar(vec_subtract(Player.drone.p_drawn, this.pts[i]));
+      if (dp.r < wind_influence_distance) {
+        Player.drone.experienceWind(dp, cart2polar(vec_subtract(this.pts[i + 1], this.pts[i])));
+      }
+    }
+  },
+
+  reset: function() {
+  },
+
+  tick: function() {
+    // `todo: modulate speed?
+    this.propagation_frames += 1;
+    if (this.propagation_frames % this.slowness !== 0) { return; }
+
+    if (this.remaining_propagations > 0 && this.pts.length > 0) {
+      // redo the curl every few frames
+
+      // `crunch
+      // var min_curl = (this.total_angle < this.angle_window[0] || this.last().y < this.height_window[0]) ? 0 : -this.curl_amplitude;
+      // var max_curl = (this.total_angle > this.angle_window[1] || this.last().y > this.height_window[1]) ? 0 : this.curl_amplitude;
+
+      var min_curl = 0;
+      var max_curl = this.curl_amplitude;
+      if ((gameplay_frame * this.slowness) % this.curl_frequency === 0) {
+        if (this.next_curl_dir === 1) {
+          this.curl = rnds(min_curl, max_curl);
+        }
+
+        // this causes alternating curl directions
+        this.curl *= this.next_curl_dir;
+        this.next_curl_dir *= -1;
+      }
+
+      var propagation = rth(this.propagation_length, this.previous_angle + this.curl);
+      this.pts.push(vec_add(
+        this.last(),
+        polar2cart(propagation)
+      ));
+
+      this.calculateNextControlPoint();
+
+      this.previous_angle = propagation.th;
+      this.total_angle += this.previous_angle;
+      this.remaining_propagations -= 1;
+    }
+
+    this.influenceDrone();
+  },
+
+  calculateNextControlPoint: function() {
+    // this is used for the drawing. each point has two bezier controls on either side
+    if (this.pts.length < 2) { return; }
+    if (this.pts.length === 2) {
+      this.bezier_controls[0] = [this.pts[0], this.pts[0]]; // meh, it's the first point
+    }
+    else {
+      var n = this.pts.length - 2;
+      var p1 = this.pts[n-1], p2 = this.pts[n], p3 = this.pts[n+1];
+      var dp = vec_subtract(p3, p1);
+      var dprth = cart2polar(dp);
+      var dcontrol = rth(dprth.r * this.bezier_control_fraction * this.curl, dprth.th);
+      var dcontrolxy = polar2cart(dcontrol);
+
+      var c1 = xy(p2.x - dcontrolxy.x, p2.y - dcontrolxy.y);
+      var c2 = xy(p2.x + dcontrolxy.x, p2.y + dcontrolxy.y);
+
+      this.bezier_controls[n] = this.curl > 0 ? [c1, c2] : [c2, c1];
+    }
+  },
+
+  // `crunch not sure how much this is used
+  last: function() {
+    if (this.pts.length < 1) { return null; }
+    return this.pts[this.pts.length - 1]
+  },
+
+  draw: function() {
+    if (this.pts.length < 3) { return; }
+
+    var pts = this.pts;
+    var controls = this.bezier_controls;
+
+    wind_colors.forEach(function(data) {
+      draw.do(windlayer.ctx, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2], lineCap:'round'}), function() {
+        var start = wind.getStart();
+        windlayer.ctx.beginPath();
+        windlayer.ctx.moveTo(pts[start - 1].x, pts[start - 1].y);
+
+        for (var i = start; i < pts.length - 1; i++) {
+          var c0 = controls[i-1][1];
+          var c1 = controls[i][0];
+          var p1 = pts[i];
+          windlayer.ctx.bezierCurveTo(c0.x, c0.y, c1.x, c1.y, p1.x, p1.y);
+        }
+        // Note: the last point doesn't get drawn (it doesn't have an associated bezier control yet)
+      })
+    })
+
+  },
+
+  getStart: function() {
+    // Get the point in the gust to start rendering
+    var start = max(1, this.pts.length - this.visible_gust_length);
+    if (this.remaining_propagations < this.visible_gust_length) {
+      start = Math.floor(this.pts.length - 1 - this.remaining_propagations);
+    }
+    return start;
+  }
+}
+
 // ITEMS ============================================================
 // ** Parent object
 // ** container must be an actor
@@ -1804,7 +2007,7 @@ var Hud = {
     integrity: function() {
       // `CRUNCH: this is essentially same as the energy meter. Just the icon adjustment is off a bit
       var p = vec_add(vec_add(overlay.origin, overlay.size), integrity_meter_position);
-      Player.drone.drawRepr(vec_add(p, xy(0, 0.3)), 2, draw.shapeStyle(hud_color), {ctx: overlay.ctx});
+      Player.drone.drawRepr(vec_add(p, xy(0, 0.3)), 2, draw.shapeStyle(hud_color), {ctx: overlay.ctx, freeze: true});
 
       p = vec_add(p, xy(1.5, 0.1));
 
@@ -2016,7 +2219,6 @@ global.onFrame = function(frame, callback) {
   gameplay_frame_callbacks[frame] = callback;
 }
 global.onload = function() {
-  console.log('STUFF:', bg1, bg2, bg1.ctx, bg2.ctx)
   environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
@@ -2050,19 +2252,20 @@ global.onload = function() {
   addToLoop('background', environment.buildings)
 
   addToLoop('foreground1', [
-      battery1,
-      battery2,
       Player.drone,
       Player.drone.person,
       p1,
       p2,
       p3,
-      target
+      target,
+      battery1,
+      battery2,
   ]);
 
   addToLoop('foreground2', [
     environment,
-    lightning
+    lightning,
+    wind
   ]);
 
   addToLoop('overlay', [Camera, Hud]);
@@ -2070,6 +2273,10 @@ global.onload = function() {
   environment.buildings.forEach(function(b) {
     b.prepopulate();
   });
+
+  scheduleEvent(5, function() {
+    wind.startGust(xy(8, 10))
+  })
   
   startGame();
 };
