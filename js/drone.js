@@ -80,9 +80,10 @@ var Drone = function(p) {
 
     this.boundify();
 
-    if (this.attempting_control) {
-      this.attemptControl();
-    }
+    // for auto-controlling
+    // if (this.attempting_control) {
+    //   this.attemptControl();
+    // }
   }
 
   this.draw = function() { 
@@ -163,7 +164,8 @@ var Drone = function(p) {
     }
 
     var f = 0.8;
-    var blade_phase = (this.powered && (typeof this.rpm_scale !== 'undefined') && !params.freeze) ? this.rpm_scale * gameplay_frame : 0.8;
+    var rpm_scale = params.rpm_scale ? params.rpm_scale : this.rpm_scale;
+    var blade_phase = (this.powered && (typeof rpm_scale !== 'undefined') && !params.freeze) ? rpm_scale * gameplay_frame : 0.8;
     drawBlade(scale * drone_arm_size.x - 0.05, sin(f * blade_phase));
     drawBlade(-scale * drone_arm_size.x + 0.05, sin(f * blade_phase));
 

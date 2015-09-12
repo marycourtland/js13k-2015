@@ -215,7 +215,7 @@ var draw = {
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(30,30) // pixels -> game units conversion
+var game_scale = xy(20,20) // pixels -> game units conversion
 , game_size = xy((global.innerWidth - 20)/game_scale.x, (global.innerHeight / game_scale.y))
 , camera_margin = xy(4, 4)
 , units_per_meter = 2 // for realistic size conversions
@@ -263,7 +263,7 @@ var game_scale = xy(30,30) // pixels -> game units conversion
 , lightning_integrity_decrease = 0.3 // OUCH!
 
 // Wind
-, wind_probability = 1/100
+, wind_probability = 1/400
 , wind_storm_probability = 1/30 // `nb unused currently
 , wind_influence_distance = 1
 
@@ -280,7 +280,7 @@ var game_scale = xy(30,30) // pixels -> game units conversion
 // Drone
 , drone_body_size = xy(0.3, 0.2)
 , drone_arm_size = xy(0.4, 0.05) // from center
-, drone_blade_size = xy(0.5, 0.1)
+, drone_blade_size = xy(0.5, 0.05)
 , drone_drain_rate = 0.00005 // energy per frame
 , drone_low_energy = 0.1
 , drone_high_energy = 0.9
@@ -307,84 +307,51 @@ var game_scale = xy(30,30) // pixels -> game units conversion
 , integrity_meter_position = xy(-20, -1.5)
 , rpm_meter_position = xy(-3, -1.5)
 
+
+// Colors
+, fadeout_color = '#eee'
+, environment_color = '#1b1b1b'
+, backgroundGradient = [
+    [1.0, '#777788'],
+    [0.4, '#999999'],
+    [0, '#cccccc']
+  ]
+, awesome_glow_color = '#fff'
+
+, tower_color1 = '#666366'
+, tower_color2 = '#555255'
+, building_color = '#3E373E'
+, door_color = '#636666'
+
+, person_color = '#000'
+, controlled_person_color = '#000'
+
+, drone_color = '#000'
+, drone_signal_color = '#9eb'
+
+, bullet_color = '#eee'
+, battery_color = "#000"
+, idea_color = "#ddd"
+
+, hud_color = '#445'
+, hud_color_dark = '#aab'
+, hud_red = '#811'
+, hud_green = '#161'
+, hud_text = '#112'
+
+, wind_colors = [
+    // color, linewidth, alpha
+    ['#ddd', 0.3, 0.05],
+    // ['#ddd', 0.2, 0.05],
+    ['#fff', 0.1, 0.05]
+  ]
+
 ;
-
-// color schemes (can't decide which one yet)
-var scheme = 2;
-
-if (scheme === 1) {
-  var environment_color = '#1b1b1b'
-  , backgroundGradient = [
-      // gradient color stops
-      [1.0, '#111320'],
-      [0.85, '#17182a'],
-      [0.7, '#1f2035'],
-      [0.4, '#433b4b'],
-      [0.0, '#a16e4f']
-    ]
-  , awesome_glow_color = '#fff'
-
-  , tower_color1 = '#111'
-  , tower_color2 = '#333'
-  , building_color = '#3E373E'
-  , door_color = '#776'
-
-  , person_color = '#000'
-  , controlled_person_color = '#000'
-
-  , drone_color = '#000'
-  , drone_signal_color = '#9eb'
-
-  , bullet_color = '#eee'
-  , battery_color = "#000"
-  , idea_color = "#ddd"
-
-  , hud_color = '#abb'
-  , hud_color_dark = '#355'
-  , hud_red = '#811'
-  , hud_green = '#161'
-  , hud_text = '#abb'
-}
-
-else if (scheme === 2) {
-  var environment_color = '#1b1b1b'
-  , backgroundGradient = [[1.0, '#777788'], [0, '#888888']]
-  , awesome_glow_color = '#fff'
-
-  , tower_color1 = '#666366'
-  , tower_color2 = '#555255'
-  , building_color = '#3E373E'
-  , door_color = '#636666'
-
-  , person_color = '#000'
-  , controlled_person_color = '#000'
-
-  , drone_color = '#000'
-  , drone_signal_color = '#9eb'
-
-  , bullet_color = '#eee'
-  , battery_color = "#000"
-  , idea_color = "#ddd"
-
-  , hud_color = '#445'
-  , hud_color_dark = '#aab'
-  , hud_red = '#811'
-  , hud_green = '#161'
-  , hud_text = '#112'
-
-  , wind_colors = [
-      // color, linewidth, alpha
-      ['#ddd', 0.3, 0.05],
-      // ['#ddd', 0.2, 0.05],
-      ['#fff', 0.1, 0.05]
-    ]
-
-  ;
-}
 
 // `crunch remove this from the css I suppose
 $("#game-message").style.color = hud_text;
-$("body").style.color = environment_color;
+$("body").style.color = fadeout_color;
+$("#game-intro").style.color = fadeout_color;
 // SETUP =============================================================
 
 
@@ -458,6 +425,8 @@ global.bg2 = new Layer("#game_background2", scale(game_size, 1/0.95), scale(game
 global.stage = new Layer("#game_stage", game_size, game_scale);
 global.windlayer = new Layer("#game_wind", game_size, game_scale); // this one will fade out slowly
 global.overlay = new Layer("#game_overlay", game_size, game_scale);
+
+global.introimg = new Layer("#intro-img", game_size, game_scale);
 
 // this is the container for all the layers
 $("#game-layers").style.height = (game_size.y * game_scale.y) + "px";
@@ -1301,9 +1270,10 @@ var Drone = function(p) {
 
     this.boundify();
 
-    if (this.attempting_control) {
-      this.attemptControl();
-    }
+    // for auto-controlling
+    // if (this.attempting_control) {
+    //   this.attemptControl();
+    // }
   }
 
   this.draw = function() { 
@@ -1384,7 +1354,8 @@ var Drone = function(p) {
     }
 
     var f = 0.8;
-    var blade_phase = (this.powered && (typeof this.rpm_scale !== 'undefined') && !params.freeze) ? this.rpm_scale * gameplay_frame : 0.8;
+    var rpm_scale = params.rpm_scale ? params.rpm_scale : this.rpm_scale;
+    var blade_phase = (this.powered && (typeof rpm_scale !== 'undefined') && !params.freeze) ? rpm_scale * gameplay_frame : 0.8;
     drawBlade(scale * drone_arm_size.x - 0.05, sin(f * blade_phase));
     drawBlade(-scale * drone_arm_size.x + 0.05, sin(f * blade_phase));
 
@@ -1580,7 +1551,8 @@ var Player = {
     38: {isDown: 0, onUp: function() { Player.drone.person.useItem(); }},
     32: {isDown: 0, whenDown: function() {
       // press spacebar to start controlling
-      Player.drone.attempting_control = !Player.drone.attempting_control;
+      Player.drone.attemptControl();
+      // Player.drone.attempting_control = !Player.drone.attempting_control;
     }}
   },
 }
@@ -1739,7 +1711,6 @@ var Wind = function() {
   this.total_angle = 0;
 
   // Data about  the path it'll take
-  this.slowness = 1;
   this.curl_frequency = 10;
   this.curl_amplitude = 0.1;
   this.propagation_length = 1;
@@ -1784,7 +1755,6 @@ Wind.prototype = {
 
     // `todo: modulate speed?
     this.propagation_frames += 1;
-    if (this.propagation_frames % this.slowness !== 0) { return; }
 
     if (this.remaining_propagations > 0 && this.pts.length > 0) {
       // redo the curl every few frames
@@ -1795,7 +1765,7 @@ Wind.prototype = {
 
       var min_curl = 0;
       var max_curl = this.curl_amplitude;
-      if ((gameplay_frame * this.slowness) % this.curl_frequency === 0) {
+      if ((gameplay_frame) % this.curl_frequency === 0) {
         if (this.next_curl_dir === 1) {
           this.curl = rnds(min_curl, max_curl);
         }
@@ -2228,6 +2198,7 @@ function refreshLoopObjects() {
 function startGame() {
   refreshLoopObjects();
   gameplay_on = true;
+  gameplay_frame = 0;
   reqAnimFrame(go);
 }
 
@@ -2259,6 +2230,33 @@ global.onFrame = function(frame, callback) {
   gameplay_frame_callbacks[frame] = callback;
 }
 global.onload = function() {
+  // show the intro animation
+  function go() {
+    if (gameplay_on) { return; }
+    gameplay_frame += 1;
+    reqAnimFrame(go);
+    introimg.clear();
+    Player.drone.drawRepr(
+      xy(game_size.x * 0.7, game_size.y * 0.4),
+      10,
+      draw.shapeStyle('white'),
+      {ctx: introimg.ctx, rpm_scale: 0.2}
+    );
+
+  }
+  reqAnimFrame(go);
+}
+
+$("#start-game").onclick = setup;
+$("#skip").onclick = setup;
+
+
+function setup () {
+  // Clean up intro
+  $("#game-intro").style.display = 'none';
+  $("#intro-img").style.display = 'none';
+
+  // Setup things!
   environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
@@ -2312,6 +2310,7 @@ global.onload = function() {
   environment.buildings.forEach(function(b) {
     b.prepopulate();
   });
+
 
   
   startGame();

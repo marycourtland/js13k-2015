@@ -94,6 +94,7 @@ function refreshLoopObjects() {
 function startGame() {
   refreshLoopObjects();
   gameplay_on = true;
+  gameplay_frame = 0;
   reqAnimFrame(go);
 }
 

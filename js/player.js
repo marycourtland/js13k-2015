@@ -27,7 +27,8 @@ var Player = {
     38: {isDown: 0, onUp: function() { Player.drone.person.useItem(); }},
     32: {isDown: 0, whenDown: function() {
       // press spacebar to start controlling
-      Player.drone.attempting_control = !Player.drone.attempting_control;
+      Player.drone.attemptControl();
+      // Player.drone.attempting_control = !Player.drone.attempting_control;
     }}
   },
 }

@@ -72,6 +72,8 @@ global.stage = new Layer("#game_stage", game_size, game_scale);
 global.windlayer = new Layer("#game_wind", game_size, game_scale); // this one will fade out slowly
 global.overlay = new Layer("#game_overlay", game_size, game_scale);
 
+global.introimg = new Layer("#intro-img", game_size, game_scale);
+
 // this is the container for all the layers
 $("#game-layers").style.height = (game_size.y * game_scale.y) + "px";
 

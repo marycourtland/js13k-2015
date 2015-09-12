@@ -1,4 +1,31 @@
 global.onload = function() {
+  // show the intro animation
+  function go() {
+    if (gameplay_on) { return; }
+    gameplay_frame += 1;
+    reqAnimFrame(go);
+    introimg.clear();
+    Player.drone.drawRepr(
+      xy(game_size.x * 0.7, game_size.y * 0.4),
+      10,
+      draw.shapeStyle('white'),
+      {ctx: introimg.ctx, rpm_scale: 0.2}
+    );
+
+  }
+  reqAnimFrame(go);
+}
+
+$("#start-game").onclick = setup;
+$("#skip").onclick = setup;
+
+
+function setup () {
+  // Clean up intro
+  $("#game-intro").style.display = 'none';
+  $("#intro-img").style.display = 'none';
+
+  // Setup things!
   environment.generate();
 
   // Global game ideas - things NPC people talk about to each other
@@ -52,6 +79,7 @@ global.onload = function() {
   environment.buildings.forEach(function(b) {
     b.prepopulate();
   });
+
 
   
   startGame();

@@ -1,7 +1,7 @@
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(30,30) // pixels -> game units conversion
+var game_scale = xy(20,20) // pixels -> game units conversion
 , game_size = xy((global.innerWidth - 20)/game_scale.x, (global.innerHeight / game_scale.y))
 , camera_margin = xy(4, 4)
 , units_per_meter = 2 // for realistic size conversions
@@ -49,7 +49,7 @@ var game_scale = xy(30,30) // pixels -> game units conversion
 , lightning_integrity_decrease = 0.3 // OUCH!
 
 // Wind
-, wind_probability = 1/100
+, wind_probability = 1/400
 , wind_storm_probability = 1/30 // `nb unused currently
 , wind_influence_distance = 1
 
@@ -66,7 +66,7 @@ var game_scale = xy(30,30) // pixels -> game units conversion
 // Drone
 , drone_body_size = xy(0.3, 0.2)
 , drone_arm_size = xy(0.4, 0.05) // from center
-, drone_blade_size = xy(0.5, 0.1)
+, drone_blade_size = xy(0.5, 0.05)
 , drone_drain_rate = 0.00005 // energy per frame
 , drone_low_energy = 0.1
 , drone_high_energy = 0.9
@@ -93,85 +93,48 @@ var game_scale = xy(30,30) // pixels -> game units conversion
 , integrity_meter_position = xy(-20, -1.5)
 , rpm_meter_position = xy(-3, -1.5)
 
+
+// Colors
+, fadeout_color = '#eee'
+, environment_color = '#1b1b1b'
+, backgroundGradient = [
+    [1.0, '#777788'],
+    [0.4, '#999999'],
+    [0, '#cccccc']
+  ]
+, awesome_glow_color = '#fff'
+
+, tower_color1 = '#666366'
+, tower_color2 = '#555255'
+, building_color = '#3E373E'
+, door_color = '#636666'
+
+, person_color = '#000'
+, controlled_person_color = '#000'
+
+, drone_color = '#000'
+, drone_signal_color = '#9eb'
+
+, bullet_color = '#eee'
+, battery_color = "#000"
+, idea_color = "#ddd"
+
+, hud_color = '#445'
+, hud_color_dark = '#aab'
+, hud_red = '#811'
+, hud_green = '#161'
+, hud_text = '#112'
+
+, wind_colors = [
+    // color, linewidth, alpha
+    ['#ddd', 0.3, 0.05],
+    // ['#ddd', 0.2, 0.05],
+    ['#fff', 0.1, 0.05]
+  ]
+
 ;
-
-// color schemes (can't decide which one yet)
-var scheme = 2;
-
-if (scheme === 1) {
-  var environment_color = '#1b1b1b'
-  , backgroundGradient = [
-      // gradient color stops
-      [1.0, '#111320'],
-      [0.85, '#17182a'],
-      [0.7, '#1f2035'],
-      [0.4, '#433b4b'],
-      [0.0, '#a16e4f']
-    ]
-  , awesome_glow_color = '#fff'
-
-  , tower_color1 = '#111'
-  , tower_color2 = '#333'
-  , building_color = '#3E373E'
-  , door_color = '#776'
-
-  , person_color = '#000'
-  , controlled_person_color = '#000'
-
-  , drone_color = '#000'
-  , drone_signal_color = '#9eb'
-
-  , bullet_color = '#eee'
-  , battery_color = "#000"
-  , idea_color = "#ddd"
-
-  , hud_color = '#abb'
-  , hud_color_dark = '#355'
-  , hud_red = '#811'
-  , hud_green = '#161'
-  , hud_text = '#abb'
-}
-
-else if (scheme === 2) {
-  var environment_color = '#1b1b1b'
-  , backgroundGradient = [
-      [1.0, '#777788'],
-      [0.4, '#999999'],
-      [0, '#cccccc']
-    ]
-  , awesome_glow_color = '#fff'
-
-  , tower_color1 = '#666366'
-  , tower_color2 = '#555255'
-  , building_color = '#3E373E'
-  , door_color = '#636666'
-
-  , person_color = '#000'
-  , controlled_person_color = '#000'
-
-  , drone_color = '#000'
-  , drone_signal_color = '#9eb'
-
-  , bullet_color = '#eee'
-  , battery_color = "#000"
-  , idea_color = "#ddd"
-
-  , hud_color = '#445'
-  , hud_color_dark = '#aab'
-  , hud_red = '#811'
-  , hud_green = '#161'
-  , hud_text = '#112'
-
-  , wind_colors = [
-      // color, linewidth, alpha
-      ['#ddd', 0.3, 0.05],
-      // ['#ddd', 0.2, 0.05],
-      ['#fff', 0.1, 0.05]
-    ]
-
-  ;
-}
 
 // `crunch remove this from the css I suppose
 $("#game-message").style.color = hud_text;
-$("body").style.color = environment_color;
+$("body").style.color = fadeout_color;
+$("#game-intro").style.color = fadeout_color;
