@@ -2,7 +2,7 @@
 // it moves stuff around
 
 var Player = {
-  drone: new Drone(xy(10, 10.05)),
+  drone: new Drone(xy(8.5, 9.5)),
   usingItem: false,
 
   tick: function() {

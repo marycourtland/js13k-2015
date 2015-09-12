@@ -55,7 +55,7 @@ global.onload = function() {
   });
 
   scheduleEvent(5, function() {
-    wind.startGust(xy(20, 10))
+    wind.startGust(xy(8, 10))
   })
   
   startGame();

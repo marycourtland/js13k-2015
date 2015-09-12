@@ -17,6 +17,7 @@ var Drone = function(p) {
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
   this.color = 'black';
   this.tilt = 0; // goes from -pi/2 (left tilt) to pi/2 (right tilt)
+  this.spin = 0;
 
   this.offset = 0; //vertical only, for now
   this.offsets = {}; // map starting frames > offset-computing-functions
@@ -28,7 +29,7 @@ var Drone = function(p) {
     // Make sure each property is in its proper bounds
     this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
     this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
-    this.tilt = bounds(this.tilt, [-pi/2, pi/2]);
+    this.tilt = this.spin > 0 ? bounds(this.tilt, [-pi/2, pi/2]) : this.tilt;
     this.energy = bounds(this.energy, [0, 1]);
     this.integrity = bounds(this.integrity, [0, 1]);
   }
@@ -59,6 +60,9 @@ var Drone = function(p) {
     this.v = vec_add(this.v, this.getLiftAccel());
 
     // Dynamics
+    this.tilt += this.spin;
+
+    this.spin *= 0.8;
     this.tilt *= 0.9; // decay the tilt
 
     this.v.x *= 0.95; // sideways drag
@@ -226,6 +230,18 @@ var Drone = function(p) {
     this.offsets[gameplay_frame] = tiltOffset();
   }
 
+
+  // Environmental effects =====================================================
+
+  this.experienceWind = function(dp, v) {
+    // NOTE: the vectors are in rth format
+    var dth = v.th - dp.th;
+
+    this.spin += 0.1 / dth;
+
+    this.v = vec_add(this.v, polar2cart(rth(0.03*v.r/dp.r, v.th)));
+
+  }
 
   // Controlling people ========================================================
 

@@ -216,91 +216,94 @@ var draw = {
 
 // Game and camera settings
 var game_scale = xy(20,20) // pixels -> game units conversion
-,   game_size = xy((global.innerWidth - 20)/game_scale.x, 30)
-,   camera_margin = xy(4, 4)
-,   units_per_meter = 2 // for realistic size conversions
+, game_size = xy((global.innerWidth - 20)/game_scale.x, 30)
+, camera_margin = xy(4, 4)
+, units_per_meter = 2 // for realistic size conversions
 
-,   world_size = [-100, 1000] // Horizontal bounds
-,   world_buffer = 10
+, world_size = [-100, 1000] // Horizontal bounds
+, world_buffer = 10
 
 
 // Environment
-,   num_tower_clumps = 60
-,   num_towers_per_clump = 10
-,   tower_clump_width = 80
-,   tower_dome_probability = 0.1
-,   tower_slant_probability = 0.1
+, num_tower_clumps = 60
+, num_towers_per_clump = 10
+, tower_clump_width = 80
+, tower_dome_probability = 0.1
+, tower_slant_probability = 0.1
 
 // Buildings
-,   door_size = xy(0.7, 1.2) // slightly larger than person
-,   person_frequency = 0.15 // people per game unit. not evenly distributed
-,   avg_people_per_building = 4 // AVERAGE
-,   avg_building_size = xy(10, 10)
-,   people_comeout_window = 8
+, door_size = xy(0.7, 1.2) // slightly larger than person
+, person_frequency = 0.15 // people per game unit. not evenly distributed
+, avg_people_per_building = 4 // AVERAGE
+, avg_building_size = xy(10, 10)
+, people_comeout_window = 8
 
 
 // Dynamics
 // *** Gravity estimate is very sensitive to FPS measurement
-,   min_dynamics_frame = 5
-,   gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / bounds(avg_fps * avg_fps, [0, 1000])); } // 9.8 m/s^2 translated to units/frame^2
-,   droneTiltAccel = 0.001
-,   dronePowerAccel = 0.0001
-,   max_tilt = pi/4
-,   tilt_decay = 0.1
+, min_dynamics_frame = 5
+, gravAccel = function() { return xy(0, gameplay_frame < min_dynamics_frame ? 0 : -9.8 / 2 / bounds(avg_fps * avg_fps, [0, 1000])); } // 9.8 m/s^2 translated to units/frame^2
+, droneTiltAccel = 0.001
+, dronePowerAccel = 0.0001
+, max_tilt = pi/4
+, tilt_decay = 0.1
 
-,   tiltOffset = function(depth) {
-      // `todo: customize this function with depth; then have successive keydown events (i.e. key being held down) increase the depth
-      return function(t) {
-        t += 1; // so that the zero thingy isn't triggered
-        t *= 0.2; // for scaling
-        return -max(0, 1.5*Math.exp(-t/2)*t/1.5);
-      }
+, tiltOffset = function(depth) {
+    // `todo: customize this function with depth; then have successive keydown events (i.e. key being held down) increase the depth
+    return function(t) {
+      t += 1; // so that the zero thingy isn't triggered
+      t *= 0.2; // for scaling
+      return -max(0, 1.5*Math.exp(-t/2)*t/1.5);
     }
+  }
 
 // Lightning
-,   lightning_chance = 0.001        // Chance that lightning will start on any given frame
-,   lightning_chance_drone = 0.3   // Of each lightning strike, chance that it will hit the drone
-,   lightning_integrity_decrease = 0.3 // OUCH!
+, lightning_chance = 0.001        // Chance that lightning will start on any given frame
+, lightning_chance_drone = 0.3   // Of each lightning strike, chance that it will hit the drone
+, lightning_integrity_decrease = 0.3 // OUCH!
+
+// Wind
+, wind_influence_distance = 1
 
 // People
-,   person_size = xy(0.3, 0.6)
-,   person_speed = 0.3
-,   person_control_rate = 0.05 // rate at which control level increases or drops
-,   min_person_resistance = 2 * person_control_rate
-,   person_interaction_window = 15
-,   interaction_distance = 1
-,   shoot_drone_window = 15
+, person_size = xy(0.3, 0.6)
+, person_speed = 0.3
+, person_control_rate = 0.05 // rate at which control level increases or drops
+, min_person_resistance = 2 * person_control_rate
+, person_interaction_window = 15
+, interaction_distance = 1
+, shoot_drone_window = 15
 
 
 // Drone
-,   drone_body_size = xy(0.3, 0.2)
-,   drone_arm_size = xy(0.4, 0.05) // from center
-,   drone_blade_size = xy(0.5, 0.1)
-,   drone_drain_rate = 0.00005 // energy per frame
-,   drone_low_energy = 0.1
-,   drone_high_energy = 0.9
-,   drone_max_sideways_accel = 0.01
+, drone_body_size = xy(0.3, 0.2)
+, drone_arm_size = xy(0.4, 0.05) // from center
+, drone_blade_size = xy(0.5, 0.1)
+, drone_drain_rate = 0.00005 // energy per frame
+, drone_low_energy = 0.1
+, drone_high_energy = 0.9
+, drone_max_sideways_accel = 0.01
 
 // Bullets
-,   bullet_radius = 0.075
-,   bullet_hit_distance = 0.5
-,   bullet_speed = 1.8
-,   bullet_frequency = 50 // frames between a guard's bullets
-,   bullet_integrity_decrease = 0.05 // how much structural integrity does a bullet disrupt?
+, bullet_radius = 0.075
+, bullet_hit_distance = 0.5
+, bullet_speed = 1.8
+, bullet_frequency = 50 // frames between a guard's bullets
+, bullet_integrity_decrease = 0.05 // how much structural integrity does a bullet disrupt?
 
 // Items
-,   battery_size = {x: 0.5, y: 0.3}
+, battery_size = {x: 0.5, y: 0.3}
 
 
 // Ideas
-,   idea_scale = 0.7
+, idea_scale = 0.7
 
 // HUD - positions are referenced from the upper right corner of game
-,   hud_dial_radius = 1
-,   bar_meter_size = xy(4, 0.5)
-,   energy_meter_position = xy(-12, -1.5)
-,   integrity_meter_position = xy(-20, -1.5)
-,   rpm_meter_position = xy(-3, -1.5)
+, hud_dial_radius = 1
+, bar_meter_size = xy(4, 0.5)
+, energy_meter_position = xy(-12, -1.5)
+, integrity_meter_position = xy(-20, -1.5)
+, rpm_meter_position = xy(-3, -1.5)
 
 ;
 
@@ -309,63 +312,71 @@ var scheme = 2;
 
 if (scheme === 1) {
   var environment_color = '#1b1b1b'
-  ,   backgroundGradient = [
-          // gradient color stops
-          [1.0, '#111320'],
-          [0.85, '#17182a'],
-          [0.7, '#1f2035'],
-          [0.4, '#433b4b'],
-          [0.0, '#a16e4f']
-      ]
-  ,   awesome_glow_color = '#fff'
+  , backgroundGradient = [
+      // gradient color stops
+      [1.0, '#111320'],
+      [0.85, '#17182a'],
+      [0.7, '#1f2035'],
+      [0.4, '#433b4b'],
+      [0.0, '#a16e4f']
+    ]
+  , awesome_glow_color = '#fff'
 
-  ,   tower_color1 = '#111'
-  ,   tower_color2 = '#333'
-  ,   building_color = '#3E373E'
-  ,   door_color = '#776'
+  , tower_color1 = '#111'
+  , tower_color2 = '#333'
+  , building_color = '#3E373E'
+  , door_color = '#776'
 
-  ,   person_color = '#000'
-  ,   controlled_person_color = '#000'
+  , person_color = '#000'
+  , controlled_person_color = '#000'
 
-  ,   drone_color = '#000'
-  ,   drone_signal_color = '#9eb'
+  , drone_color = '#000'
+  , drone_signal_color = '#9eb'
 
-  ,   bullet_color = '#eee'
-  ,   battery_color = "#000"
-  ,   idea_color = "#ddd"
+  , bullet_color = '#eee'
+  , battery_color = "#000"
+  , idea_color = "#ddd"
 
-  ,   hud_color = '#abb'
-  ,   hud_color_dark = '#355'
-  ,   hud_red = '#811'
-  ,   hud_green = '#161'
-  ,   hud_text = '#abb'
+  , hud_color = '#abb'
+  , hud_color_dark = '#355'
+  , hud_red = '#811'
+  , hud_green = '#161'
+  , hud_text = '#abb'
 }
 
 else if (scheme === 2) {
   var environment_color = '#1b1b1b'
-  ,   backgroundGradient = [[1.0, '#777788'], [0, '#888888']]
-  ,   awesome_glow_color = '#fff'
+  , backgroundGradient = [[1.0, '#777788'], [0, '#888888']]
+  , awesome_glow_color = '#fff'
 
-  ,   tower_color1 = '#666366'
-  ,   tower_color2 = '#555255'
-  ,   building_color = '#3E373E'
-  ,   door_color = '#636666'
+  , tower_color1 = '#666366'
+  , tower_color2 = '#555255'
+  , building_color = '#3E373E'
+  , door_color = '#636666'
 
-  ,   person_color = '#000'
-  ,   controlled_person_color = '#000'
+  , person_color = '#000'
+  , controlled_person_color = '#000'
 
-  ,   drone_color = '#000'
-  ,   drone_signal_color = '#9eb'
+  , drone_color = '#000'
+  , drone_signal_color = '#9eb'
 
-  ,   bullet_color = '#eee'
-  ,   battery_color = "#000"
-  ,   idea_color = "#ddd"
+  , bullet_color = '#eee'
+  , battery_color = "#000"
+  , idea_color = "#ddd"
 
-  ,   hud_color = '#445'
-  ,   hud_color_dark = '#aab'
-  ,   hud_red = '#811'
-  ,   hud_green = '#161'
-  ,   hud_text = '#112'
+  , hud_color = '#445'
+  , hud_color_dark = '#aab'
+  , hud_red = '#811'
+  , hud_green = '#161'
+  , hud_text = '#112'
+
+  , wind_colors = [
+      // color, linewidth, alpha
+      ['#ddd', 0.3, 0.05],
+      ['#fff', 0.1, 0.05]
+    ]
+
+  ;
 }
 
 // `crunch remove this from the css I suppose
@@ -1223,6 +1234,7 @@ var Drone = function(p) {
   this.rpm_diff = 0; // Negative: tilted leftwards. Positive: tilted rightwards
   this.color = 'black';
   this.tilt = 0; // goes from -pi/2 (left tilt) to pi/2 (right tilt)
+  this.spin = 0;
 
   this.offset = 0; //vertical only, for now
   this.offsets = {}; // map starting frames > offset-computing-functions
@@ -1234,7 +1246,7 @@ var Drone = function(p) {
     // Make sure each property is in its proper bounds
     this.rpm_scale = bounds(this.rpm_scale, [0, 1]);
     this.rpm_diff = bounds(this.rpm_diff, [-1, 1]);
-    this.tilt = bounds(this.tilt, [-pi/2, pi/2]);
+    this.tilt = this.spin > 0 ? bounds(this.tilt, [-pi/2, pi/2]) : this.tilt;
     this.energy = bounds(this.energy, [0, 1]);
     this.integrity = bounds(this.integrity, [0, 1]);
   }
@@ -1265,6 +1277,9 @@ var Drone = function(p) {
     this.v = vec_add(this.v, this.getLiftAccel());
 
     // Dynamics
+    this.tilt += this.spin;
+
+    this.spin *= 0.8;
     this.tilt *= 0.9; // decay the tilt
 
     this.v.x *= 0.95; // sideways drag
@@ -1433,6 +1448,18 @@ var Drone = function(p) {
   }
 
 
+  // Environmental effects =====================================================
+
+  this.experienceWind = function(dp, v) {
+    // NOTE: the vectors are in rth format
+    var dth = v.th - dp.th;
+
+    this.spin += 0.1 / dth;
+
+    this.v = vec_add(this.v, polar2cart(rth(0.03*v.r/dp.r, v.th)));
+
+  }
+
   // Controlling people ========================================================
 
   this.controlStrength = function(person) {
@@ -1524,7 +1551,7 @@ Drone.prototype = new Actor();
 // it moves stuff around
 
 var Player = {
-  drone: new Drone(xy(10, 10.05)),
+  drone: new Drone(xy(8.5, 9.5)),
   usingItem: false,
 
   tick: function() {
@@ -1685,11 +1712,12 @@ global.wind = {
   num_propagations: [50, 60],
   angle_window: [-pi/4, pi/4],
   height_window: [environment.ground.y0, game_size.y - 4],
+  next_curl_dir: 1,
 
   curl: 0,
-  curl_frequency: 5,
+  curl_frequency: 10,
   previous_angle: 0,
-  curl_amplitude: 1,
+  curl_amplitude: 0.1,
   propagation_length: 1,
 
   total_angle: 0,
@@ -1701,6 +1729,28 @@ global.wind = {
 
   bezier_control_fraction: 0.18,
   bezier_controls: {},
+
+  startGust: function(origin) {
+    // Random walk in a general direction (rightwards, for now - `temp)
+    this.pts = [origin];
+    this.bezier_controls = {};
+    this.curl = 0;
+    this.remaining_propagations = rnds.apply(null, this.num_propagations);
+    this.previous_angle = rnd_choice(this.starting_angles);
+    this.total_angle = 0;
+    this.propagation_frames = -1;
+    this.next_curl_dir = rnd_choice([1, -1]);
+  },
+
+  influenceDrone: function() {
+    if (this.pts.length < 2) { return; } // `todo: maybe i want to limit this to < 3 because of the rendering
+    for (var i = this.getStart() - 1; i < this.pts.length - 2; i++) {
+      var dp = cart2polar(vec_subtract(Player.drone.p_drawn, this.pts[i]));
+      if (dp.r < wind_influence_distance) {
+        Player.drone.experienceWind(dp, cart2polar(vec_subtract(this.pts[i + 1], this.pts[i])));
+      }
+    }
+  },
 
   reset: function() {
   },
@@ -1714,16 +1764,19 @@ global.wind = {
       // redo the curl every few frames
 
       // `crunch
-      var min_curl = (this.total_angle < this.angle_window[0] || this.last().y < this.height_window[0]) ? 0 : -this.curl_amplitude;
-      var max_curl = (this.total_angle > this.angle_window[1] || this.last().y > this.height_window[1]) ? 0 : this.curl_amplitude;
+      // var min_curl = (this.total_angle < this.angle_window[0] || this.last().y < this.height_window[0]) ? 0 : -this.curl_amplitude;
+      // var max_curl = (this.total_angle > this.angle_window[1] || this.last().y > this.height_window[1]) ? 0 : this.curl_amplitude;
+
+      var min_curl = 0;
+      var max_curl = this.curl_amplitude;
       if ((gameplay_frame * this.slowness) % this.curl_frequency === 0) {
-        this.curl = rnds(min_curl, max_curl);
-      }
-      else if (this.last().y < this.height_window[0]) {
-        this.curl = rnds(min_curl, 0);
-      }
-      else if (this.last().y > this.height_window[1]) {
-        this.curl = rnds(0, max_curl);
+        if (this.next_curl_dir === 1) {
+          this.curl = rnds(min_curl, max_curl);
+        }
+
+        // this causes alternating curl directions
+        this.curl *= this.next_curl_dir;
+        this.next_curl_dir *= -1;
       }
 
       var propagation = rth(this.propagation_length, this.previous_angle + this.curl);
@@ -1738,6 +1791,8 @@ global.wind = {
       this.total_angle += this.previous_angle;
       this.remaining_propagations -= 1;
     }
+
+    this.influenceDrone();
   },
 
   calculateNextControlPoint: function() {
@@ -1770,44 +1825,16 @@ global.wind = {
   draw: function() {
     if (this.pts.length < 3) { return; }
 
-    /// `temp control points
-
-    // draw.c(windlayer.ctx, this.bezier_controls[2][1], 0.2, draw.shapeStyle('blue'));
-    // for (var i in this.bezier_controls) {
-    //   var color = (i % 2 === 0) ? 'red' : 'orange';
-    //   draw.c(windlayer.ctx, this.bezier_controls[i][0], 0.1, draw.shapeStyle(color));
-    //   draw.c(windlayer.ctx, this.bezier_controls[i][1], 0.1, draw.shapeStyle(color));
-    // }
-    // this.pts.forEach(function(pt) {
-    //   draw.c(windlayer.ctx, pt, 0.1, draw.shapeStyle('green'));
-    // })
-    
-    ///////////
-
-
-    var colordata = [
-      // color, linewidth, alpha
-      ['#ddd', 0.3, 0.05],
-      // ['#eee', 0.8, 0.05],
-      // ['#eee', 0.6, 0.05],
-      // ['#eee', 0.5, 0.05],
-      // ['#eee', 0.4, 0.05],
-      // ['#eee', 0.3, 0.05],
-      // ['#eee', 0.2, 0.05],
-      ['#fff', 0.1, 0.05]
-    ];
     var pts = this.pts;
     var controls = this.bezier_controls;
-    colordata.forEach(function(data) {
+
+    wind_colors.forEach(function(data) {
       draw.do(windlayer.ctx, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2], lineCap:'round'}), function() {
-        var start = max(1, pts.length - wind.visible_gust_length);
-        if (wind.remaining_propagations < wind.visible_gust_length) {
-          start = Math.floor(pts.length - 1 - wind.remaining_propagations);
-        }
+        var start = wind.getStart();
         windlayer.ctx.beginPath();
         windlayer.ctx.moveTo(pts[start - 1].x, pts[start - 1].y);
-        for (var i = start; i < pts.length - 1; i++) {
 
+        for (var i = start; i < pts.length - 1; i++) {
           var c0 = controls[i-1][1];
           var c1 = controls[i][0];
           var p1 = pts[i];
@@ -1819,15 +1846,13 @@ global.wind = {
 
   },
 
-  startGust: function(origin) {
-    // Random walk in a general direction (rightwards, for now - `temp)
-    this.pts = [origin];
-    this.bezier_controls = {};
-    this.curl = 0;
-    this.remaining_propagations = rnds.apply(null, this.num_propagations);
-    this.previous_angle = rnd_choice(this.starting_angles);
-    this.total_angle = 0;
-    this.propagation_frames = -1;
+  getStart: function() {
+    // Get the point in the gust to start rendering
+    var start = max(1, this.pts.length - this.visible_gust_length);
+    if (this.remaining_propagations < this.visible_gust_length) {
+      start = Math.floor(this.pts.length - 1 - this.remaining_propagations);
+    }
+    return start;
   }
 }
 
@@ -1982,7 +2007,7 @@ var Hud = {
     integrity: function() {
       // `CRUNCH: this is essentially same as the energy meter. Just the icon adjustment is off a bit
       var p = vec_add(vec_add(overlay.origin, overlay.size), integrity_meter_position);
-      Player.drone.drawRepr(vec_add(p, xy(0, 0.3)), 2, draw.shapeStyle(hud_color), {ctx: overlay.ctx});
+      Player.drone.drawRepr(vec_add(p, xy(0, 0.3)), 2, draw.shapeStyle(hud_color), {ctx: overlay.ctx, freeze: true});
 
       p = vec_add(p, xy(1.5, 0.1));
 
@@ -2250,7 +2275,7 @@ global.onload = function() {
   });
 
   scheduleEvent(5, function() {
-    wind.startGust(xy(20, 10))
+    wind.startGust(xy(8, 10))
   })
   
   startGame();
