@@ -1541,6 +1541,8 @@ Drone.prototype = new Actor();
 // THE PLAYER ========================================================
 // it moves stuff around
 
+// this file is also getting some UI stuff :|
+
 var Player = {
   drone: new Drone(xy(8.5, 9.5)),
   usingItem: false,
@@ -1753,6 +1755,12 @@ window.addEventListener('mousemove', function(event) {
   mouse_p = p;
 })
 
+
+// Mute button
+$("#mute").onclick = function() {
+  Sound.toggleMute();
+  $("#mute").textContent = Sound.muted ? 'unmute' : 'mute sound';
+}
 
 
 
@@ -2487,4 +2495,36 @@ function setup () {
 };
 
 
+var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+var master_volume = audioCtx.createGain();
+master_volume.connect(audioCtx.destination);
+master_volume.gain.value = 1;
+
+function playInfiniteChord(chord) {
+    return chord.map(function(note) {
+        var oscillator = audioCtx.createOscillator();
+        oscillator.connect(master_volume);
+        oscillator.type = 'triangle';
+        oscillator.frequency.value = note;
+        oscillator.start();
+        return oscillator;
+    });
+}
+
+var Sound = {
+    muted: false,
+    volume: 1,
+    buzzes: [],
+    startBuzz: function () {
+        this.buzzes = playInfiniteChord([162, 220, 195], 0);
+    },
+    toggleMute: function() {
+        this.muted = !this.muted;
+        master_volume.gain.value = this.muted ? 0 : this.volume;
+    },
+}
+
+
+Sound.startBuzz();
 })();

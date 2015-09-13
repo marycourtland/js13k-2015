@@ -1,6 +1,8 @@
 // THE PLAYER ========================================================
 // it moves stuff around
 
+// this file is also getting some UI stuff :|
+
 var Player = {
   drone: new Drone(xy(8.5, 9.5)),
   usingItem: false,
@@ -213,6 +215,12 @@ window.addEventListener('mousemove', function(event) {
   mouse_p = p;
 })
 
+
+// Mute button
+$("#mute").onclick = function() {
+  Sound.toggleMute();
+  $("#mute").textContent = Sound.muted ? 'unmute' : 'mute sound';
+}
 
 
 

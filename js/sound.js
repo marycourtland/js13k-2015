@@ -16,12 +16,15 @@ function playInfiniteChord(chord) {
 }
 
 var Sound = {
+    muted: false,
+    volume: 1,
     buzzes: [],
     startBuzz: function () {
         this.buzzes = playInfiniteChord([162, 220, 195], 0);
     },
     toggleMute: function() {
-        master_volume.gain.value = 1 - master_volume.gain.value;
+        this.muted = !this.muted;
+        master_volume.gain.value = this.muted ? 0 : this.volume;
     },
 }
 
