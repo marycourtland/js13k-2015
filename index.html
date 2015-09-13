@@ -77,12 +77,13 @@
       text-align:center;
     }
 
-    #mute {
+    #mute, #skip {
       position: fixed;
       bottom: 1rem;
-      left: 1rem;
       color: #899;
     }
+    #mute { left: 1rem; }
+    #skip { left: 7rem; }
   </style>
   <body>
 
@@ -110,12 +111,12 @@
       <div class="intro delay-6 end">
         <p style="font-size:40px; ">OVERPOWERED</p>
         <!-- <p style="font-size:14px;">A game for JS13k &bull; September 2015</p> -->
-        <a href="#" id='start-game'>start</a>
-        <!-- <a href="#" id="skip" style="font-style:italic; font-size:14px; opacity: 1; ">skip</a> -->
+        <a href="#" id='start-game'>start</a>-->
       </div>
     </div>
 
     <a href='#' id='mute'>mute sound</a>
+    <a href="#" id="skip">skip intro</a>
   </body>
   <script src="min.js"></script>
 </html>

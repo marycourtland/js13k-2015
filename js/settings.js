@@ -6,7 +6,7 @@ var game_scale = xy(30,30) // pixels -> game units conversion
 , camera_margin = xy(4, 4)
 , units_per_meter = 2 // for realistic size conversions
 
-, world_size = [-20, 1000] // Horizontal bounds
+, world_size = [-25, 1000] // Horizontal bounds
 , world_buffer = 10
 
 , drone_upper_bound = game_size.y * 1.3
@@ -75,6 +75,7 @@ var game_scale = xy(30,30) // pixels -> game units conversion
 , drone_low_energy = 0.1
 , drone_high_energy = 0.9
 , drone_max_sideways_accel = 0.01
+, dronw_x_bounds = [-20, 1000] // `todo fix 2nd one
 
 // Bullets
 , bullet_radius = 0.075
@@ -110,6 +111,7 @@ var game_scale = xy(30,30) // pixels -> game units conversion
     [0, '#cccccc']
   ]
 , awesome_glow_color = '#fff'
+, fog_color = '#fff'
 
 , tower_color1 = '#666366'
 , tower_color2 = '#555255'

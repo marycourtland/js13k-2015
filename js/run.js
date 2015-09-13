@@ -17,13 +17,12 @@ global.onload = function() {
 }
 
 $("#start-game").onclick = setup;
-// $("#skip").onclick = setup; // `todo: fix the skip button
+$("#skip").onclick = setup;
 
-// `temporary SKIP THE INTRO
-// global.onload = setup;
 
 function setup () {
   // Clean up intro
+  $("#skip").style.display = 'none';
   $("#game-intro").style.display = 'none';
   $("#intro-img").style.display = 'none';
 
@@ -39,8 +38,8 @@ function setup () {
     })
   }
 
-  // Game target: if you overpower this one, you win
-  global.target = (new Person()).init({p: xy(200, 3), v: xy(-0.05, 0), role: roles.game_target});
+  // Game target: if you overpower this one, you win. Place him in the latter half
+  global.target = (new Person()).init({p: xy(rnds(500, 1000), 3), v: xy(-0.05, 0), role: roles.game_target});
 
 
   addToLoop('background', [Events, Player]);
@@ -50,6 +49,7 @@ function setup () {
   addToLoop('foreground1', [
       Player.drone,
       (new Person()).init({p: xy(game_size.x + 5, 3)}),
+      (new Person()).init({p: xy(game_size.x + 20, 3), v: xy(-0.05, 0), role: roles.guard}),
       target,
       new Battery(xy(game_size.x + 8, 3)),
   ]);

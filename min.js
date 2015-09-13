@@ -146,12 +146,10 @@ var draw = {
   clrp: function(ctx, p0, p1, alpha) {
     // props to: http://stackoverflow.com/questions/16776665/canvas-clearrect-with-alpha
     this.clr(global.fader.ctx, p0, p1);
-    var a = 3;
     global.fader.ctx.globalAlpha = alpha;
-    global.fader.ctx.drawImage(ctx.canvas, 0, 0, global.fader.ctx.canvas.width/game_scale.x, global.fader.ctx.canvas.height/game_scale.y);
+    global.fader.ctx.drawImage(ctx.canvas, global.fader.size.x, global.fader.size.y, global.fader.ctx.canvas.width/game_scale.x, global.fader.ctx.canvas.height/game_scale.y);
     this.clr(ctx, p0, p1);
-    var a = 3;
-    ctx.drawImage(global.fader.canvas, 0, 0, ctx.canvas.width/game_scale.x, ctx.canvas.height/game_scale.y);
+    ctx.drawImage(global.fader.canvas, global.fader.size.x, global.fader.size.y, ctx.canvas.width/game_scale.x, ctx.canvas.height/game_scale.y);
   },
 
   // Fill
@@ -223,7 +221,7 @@ var game_scale = xy(30,30) // pixels -> game units conversion
 , camera_margin = xy(4, 4)
 , units_per_meter = 2 // for realistic size conversions
 
-, world_size = [-20, 1000] // Horizontal bounds
+, world_size = [-25, 1000] // Horizontal bounds
 , world_buffer = 10
 
 , drone_upper_bound = game_size.y * 1.3
@@ -292,6 +290,7 @@ var game_scale = xy(30,30) // pixels -> game units conversion
 , drone_low_energy = 0.1
 , drone_high_energy = 0.9
 , drone_max_sideways_accel = 0.01
+, dronw_x_bounds = [-20, 1000] // `todo fix 2nd one
 
 // Bullets
 , bullet_radius = 0.075
@@ -327,6 +326,7 @@ var game_scale = xy(30,30) // pixels -> game units conversion
     [0, '#cccccc']
   ]
 , awesome_glow_color = '#fff'
+, fog_color = '#fff'
 
 , tower_color1 = '#666366'
 , tower_color2 = '#555255'
@@ -633,6 +633,23 @@ var environment = {
     // Ground
     var fill = draw.shapeStyle(environment_color);
     draw.p(stage.ctx, this.pts, fill);
+
+    this.drawBoundaryFog();
+  },
+
+  drawBoundaryFog: function() {
+    var p1 = xy(world_size[0] - 50, 0),
+        p2 = xy(world_size[0] + 50, game_size.y),
+        p3 = xy(world_size[1] + 50, 0),
+        p4 = xy(world_size[1] - 50, game_size.y);
+    var grd1 = stage.ctx.createLinearGradient(p1.x, 0, p2.x, 0);
+    var grd2 = stage.ctx.createLinearGradient(p3.x, 0, p4.x, 0);
+    grd1.addColorStop(0.5, 'white');
+    grd1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    grd2.addColorStop(0.5, 'white');
+    grd2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    draw.r(stage.ctx, p1, p2, draw.shapeStyle(grd1));
+    draw.r(stage.ctx, p3, p4, draw.shapeStyle(grd2));
   },
 
   drawTower: function(tower) {
@@ -1234,7 +1251,8 @@ var Drone = function(p) {
     this.tilt = this.spin > 0 ? bounds(this.tilt, [-pi/2, pi/2]) : this.tilt;
     this.energy = bounds(this.energy, [0, 1]);
     this.integrity = bounds(this.integrity, [0, 1]);
-    this.p.y = min(this.p.y, drone_upper_bound)
+    this.p.y = min(this.p.y, drone_upper_bound);
+    this.p.x = bounds(this.p.x, world_size);
   }
 
   this.reset = function() {
@@ -2441,13 +2459,12 @@ global.onload = function() {
 }
 
 $("#start-game").onclick = setup;
-// $("#skip").onclick = setup; // `todo: fix the skip button
+$("#skip").onclick = setup;
 
-// `temporary SKIP THE INTRO
-// global.onload = setup;
 
 function setup () {
   // Clean up intro
+  $("#skip").style.display = 'none';
   $("#game-intro").style.display = 'none';
   $("#intro-img").style.display = 'none';
 
@@ -2463,8 +2480,8 @@ function setup () {
     })
   }
 
-  // Game target: if you overpower this one, you win
-  global.target = (new Person()).init({p: xy(200, 3), v: xy(-0.05, 0), role: roles.game_target});
+  // Game target: if you overpower this one, you win. Place him in the latter half
+  global.target = (new Person()).init({p: xy(rnds(500, 1000), 3), v: xy(-0.05, 0), role: roles.game_target});
 
 
   addToLoop('background', [Events, Player]);
@@ -2474,6 +2491,7 @@ function setup () {
   addToLoop('foreground1', [
       Player.drone,
       (new Person()).init({p: xy(game_size.x + 5, 3)}),
+      (new Person()).init({p: xy(game_size.x + 20, 3), v: xy(-0.05, 0), role: roles.guard}),
       target,
       new Battery(xy(game_size.x + 8, 3)),
   ]);

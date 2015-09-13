@@ -32,7 +32,8 @@ var Drone = function(p) {
     this.tilt = this.spin > 0 ? bounds(this.tilt, [-pi/2, pi/2]) : this.tilt;
     this.energy = bounds(this.energy, [0, 1]);
     this.integrity = bounds(this.integrity, [0, 1]);
-    this.p.y = min(this.p.y, drone_upper_bound)
+    this.p.y = min(this.p.y, drone_upper_bound);
+    this.p.x = bounds(this.p.x, world_size);
   }
 
   this.reset = function() {

@@ -36,12 +36,10 @@ var draw = {
   clrp: function(ctx, p0, p1, alpha) {
     // props to: http://stackoverflow.com/questions/16776665/canvas-clearrect-with-alpha
     this.clr(global.fader.ctx, p0, p1);
-    var a = 3;
     global.fader.ctx.globalAlpha = alpha;
-    global.fader.ctx.drawImage(ctx.canvas, 0, 0, global.fader.ctx.canvas.width/game_scale.x, global.fader.ctx.canvas.height/game_scale.y);
+    global.fader.ctx.drawImage(ctx.canvas, global.fader.size.x, global.fader.size.y, global.fader.ctx.canvas.width/game_scale.x, global.fader.ctx.canvas.height/game_scale.y);
     this.clr(ctx, p0, p1);
-    var a = 3;
-    ctx.drawImage(global.fader.canvas, 0, 0, ctx.canvas.width/game_scale.x, ctx.canvas.height/game_scale.y);
+    ctx.drawImage(global.fader.canvas, global.fader.size.x, global.fader.size.y, ctx.canvas.width/game_scale.x, ctx.canvas.height/game_scale.y);
   },
 
   // Fill

@@ -42,6 +42,23 @@ var environment = {
     // Ground
     var fill = draw.shapeStyle(environment_color);
     draw.p(stage.ctx, this.pts, fill);
+
+    this.drawBoundaryFog();
+  },
+
+  drawBoundaryFog: function() {
+    var p1 = xy(world_size[0] - 50, 0),
+        p2 = xy(world_size[0] + 50, game_size.y),
+        p3 = xy(world_size[1] + 50, 0),
+        p4 = xy(world_size[1] - 50, game_size.y);
+    var grd1 = stage.ctx.createLinearGradient(p1.x, 0, p2.x, 0);
+    var grd2 = stage.ctx.createLinearGradient(p3.x, 0, p4.x, 0);
+    grd1.addColorStop(0.5, 'white');
+    grd1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    grd2.addColorStop(0.5, 'white');
+    grd2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    draw.r(stage.ctx, p1, p2, draw.shapeStyle(grd1));
+    draw.r(stage.ctx, p3, p4, draw.shapeStyle(grd2));
   },
 
   drawTower: function(tower) {
