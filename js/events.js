@@ -15,13 +15,3 @@ var Events = {
     }
   }
 }
-
-  // scheduleEvent(5, function() {
-  //   (new Wind()).startGust(xy(8, 10));
-  // })
-  // scheduleEvent(30, function() {
-  //   (new Wind()).startGust(xy(4, 20));
-  // })
-  // scheduleEvent(60, function() {
-  //   (new Wind()).startGust(xy(15, 15));
-  // })

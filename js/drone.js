@@ -32,6 +32,7 @@ var Drone = function(p) {
     this.tilt = this.spin > 0 ? bounds(this.tilt, [-pi/2, pi/2]) : this.tilt;
     this.energy = bounds(this.energy, [0, 1]);
     this.integrity = bounds(this.integrity, [0, 1]);
+    this.p.y = min(this.p.y, drone_upper_bound)
   }
 
   this.reset = function() {
@@ -215,14 +216,14 @@ var Drone = function(p) {
 
   this.tiltLeft = function() {
     if (this.skip_tick || !this.powered) { return; }
-    this.v.x -= 0.1;
+    this.v.x -= sideways_velocity_bump;
     this.rpm_diff -= droneTiltAccel;
     this.tilt = -max_tilt;
   }
 
   this.tiltRight = function() {
     if (this.skip_tick || !this.powered) { return; }
-    this.v.x += 0.1;
+    this.v.x += sideways_velocity_bump;
     this.rpm_diff += droneTiltAccel;
     this.tilt = max_tilt;
   }
@@ -280,9 +281,12 @@ var Drone = function(p) {
     this.person.resistance = min_person_resistance;
 
     this.person.byRole('onControl');
+    
+    Player.tutorial.has_controlled = true; 
   }
 
   this.attemptControl = function() {
+
     var person = this.getClosestPerson();
 
     // square the control strength so that it's more limited

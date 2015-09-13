@@ -8,6 +8,9 @@ var global = window
 , notify = function(msg) {
     $('#game-message').textContent = msg;
   }
+, setLabel = function(msg) {
+    $('#game-label').textContent = msg;
+  }
 
 // Math ==============================================================
 , pi = Math.PI

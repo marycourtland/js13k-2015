@@ -1,6 +1,6 @@
 // ENVIRONMENT =======================================================
 var environment = {
-  ground: new Platform(xy(world_size[0], 3), 1, world_size, {}),
+  ground: new Platform(xy(world_size[0], 4), 1, world_size, {}),
 
   pts: [],
   towers: [], // Towers in the background skyline represented by [x, width, height]
@@ -96,7 +96,7 @@ var environment = {
   },
 
   generateTowerClump: function() {
-    var x0 = rnds.apply(global, this.ground.xrange);
+    var x0 = rnds.apply(global, tower_range);
     var n = num_towers_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
@@ -148,7 +148,8 @@ var environment = {
 
     // building positions should be evenly distributed
     // ... but perturbed a little bit
-    var buildings = range(world_size[0] + world_buffer, world_size[1] - world_buffer, avg_building_spacing)
+    // Also, don't generate a building in the vicinity of the drone spawn
+    var buildings = range(game_size.x * 2, world_size[1] - world_buffer, avg_building_spacing)
       .forEach(function(pos) {
         var b = new Building(
           perturb(pos, 10),

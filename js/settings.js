@@ -1,13 +1,15 @@
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(20,20) // pixels -> game units conversion
+var game_scale = xy(30,30) // pixels -> game units conversion
 , game_size = xy((global.innerWidth - 20)/game_scale.x, (global.innerHeight / game_scale.y))
 , camera_margin = xy(4, 4)
 , units_per_meter = 2 // for realistic size conversions
 
-, world_size = [-100, 1000] // Horizontal bounds
+, world_size = [-20, 1000] // Horizontal bounds
 , world_buffer = 10
+
+, drone_upper_bound = game_size.y * 1.3
 
 
 // Environment
@@ -16,6 +18,7 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 , tower_clump_width = 80
 , tower_dome_probability = 0.1
 , tower_slant_probability = 0.1
+, tower_range = [world_size[0] + 20, world_size[1] - 20]
 
 // Buildings
 , door_size = xy(0.7, 1.2) // slightly larger than person
@@ -33,6 +36,7 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 , dronePowerAccel = 0.0001
 , max_tilt = pi/4
 , tilt_decay = 0.1
+, sideways_velocity_bump = 0.07
 
 , tiltOffset = function(depth) {
     // `todo: customize this function with depth; then have successive keydown events (i.e. key being held down) increase the depth
@@ -87,11 +91,14 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 , idea_scale = 0.7
 
 // HUD - positions are referenced from the upper right corner of game
-, hud_dial_radius = 1
-, bar_meter_size = xy(4, 0.5)
-, energy_meter_position = xy(-12, -1.5)
-, integrity_meter_position = xy(-20, -1.5)
-, rpm_meter_position = xy(-3, -1.5)
+, hud_dial_radius = 0.4
+, bar_meter_size = xy(2, 0.25)
+, energy_meter_position = xy(-6, -0.75)
+, integrity_meter_position = xy(-10, -0.75)
+, rpm_meter_position = xy(-1.5, -0.75)
+
+// mouse
+, mouse_hover_distance = 1
 
 
 // Colors

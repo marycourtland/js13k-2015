@@ -63,11 +63,18 @@
     #game-layers canvas { position: absolute; top:0; left:0; }
     #game-message, .intro { position: absolute; top: 0; left: 20px;}
 
-    #info { margin-left: 20px; float:left; margin: 1rem; color: black;}
     #fader { display: none; }
     #game-message {
       margin-top: 1rem;
       font-size: 16px;
+    }
+    #game-label {
+      position: absolute;
+      bottom: 1rem;
+      font-size: 20px;
+      color: #abb;
+      width: 100%;
+      text-align:center;
     }
   </style>
   <body>
@@ -84,6 +91,7 @@
       <canvas id="intro-img" class="intro delay-3"></canvas>
     </div>
     <div id="game-message"></div>
+    <div id="game-label"></div>
 
     <div id="game-intro">
       <p class="intro">The humans used me for many things.</p>
@@ -99,25 +107,6 @@
         <!-- <a href="#" id="skip" style="font-style:italic; font-size:14px; opacity: 1; ">skip</a> -->
       </div>
     </div>
-    
-
-    <div id="info">
-      <h2>OVERPOWERED (working title)</h2>
-      <div id="game-info">
-        <p>FPS: <span id="fps"></span></p>
-      </div>
-      <h4>Controls</h4>
-      <p>Move with <em>A, W, S, D</em></p>
-      <p>Press <em>space</em> take control of a human <br />(must be in range of control signal)</p>
-      <p>Move your human with <em>&larr;, &rarr;</em></p>
-      <p>Make your human hold/drop items with <em>&darr;</em></p>
-      <p>Retrieve items from your human with <em>&uarr;</em></p>
-    </div>
-
-    <canvas id="phaseplot-drone-xy" style="background-color:black;"></canvas>
-    <canvas id="phaseplot-drone-vx" style="background-color:black;"></canvas>
-    <canvas id="phaseplot-drone-vy" style="background-color:black;"></canvas>
-    <canvas id="phaseplot-drone-ay" style="background-color:black;"></canvas>
   </body>
   <script src="min.js"></script>
 </html>

@@ -53,6 +53,7 @@ var Camera = {
     global.stage.moveBy(p);
     global.windlayer.moveBy(p);
     environment.redraw_bg = true;
+    Player.tutorial.has_scrolled = true;
   },
 
   focusOnPlayerDrone: function() {

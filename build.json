@@ -21,7 +21,6 @@
     "js/hud.js",
     "js/events.js",
     "js/gameloop.js",
-    "js/run.js",
-    "js/phaseplot.js"
+    "js/run.js"
   ]
 }

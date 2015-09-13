@@ -8,6 +8,9 @@ var global = window
 , notify = function(msg) {
     $('#game-message').textContent = msg;
   }
+, setLabel = function(msg) {
+    $('#game-label').textContent = msg;
+  }
 
 // Math ==============================================================
 , pi = Math.PI
@@ -215,13 +218,15 @@ var draw = {
 // All units in game units except for game_scale
 
 // Game and camera settings
-var game_scale = xy(20,20) // pixels -> game units conversion
+var game_scale = xy(30,30) // pixels -> game units conversion
 , game_size = xy((global.innerWidth - 20)/game_scale.x, (global.innerHeight / game_scale.y))
 , camera_margin = xy(4, 4)
 , units_per_meter = 2 // for realistic size conversions
 
-, world_size = [-100, 1000] // Horizontal bounds
+, world_size = [-20, 1000] // Horizontal bounds
 , world_buffer = 10
+
+, drone_upper_bound = game_size.y * 1.3
 
 
 // Environment
@@ -230,6 +235,7 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 , tower_clump_width = 80
 , tower_dome_probability = 0.1
 , tower_slant_probability = 0.1
+, tower_range = [world_size[0] + 20, world_size[1] - 20]
 
 // Buildings
 , door_size = xy(0.7, 1.2) // slightly larger than person
@@ -247,6 +253,7 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 , dronePowerAccel = 0.0001
 , max_tilt = pi/4
 , tilt_decay = 0.1
+, sideways_velocity_bump = 0.07
 
 , tiltOffset = function(depth) {
     // `todo: customize this function with depth; then have successive keydown events (i.e. key being held down) increase the depth
@@ -301,11 +308,14 @@ var game_scale = xy(20,20) // pixels -> game units conversion
 , idea_scale = 0.7
 
 // HUD - positions are referenced from the upper right corner of game
-, hud_dial_radius = 1
-, bar_meter_size = xy(4, 0.5)
-, energy_meter_position = xy(-12, -1.5)
-, integrity_meter_position = xy(-20, -1.5)
-, rpm_meter_position = xy(-3, -1.5)
+, hud_dial_radius = 0.4
+, bar_meter_size = xy(2, 0.25)
+, energy_meter_position = xy(-6, -0.75)
+, integrity_meter_position = xy(-10, -0.75)
+, rpm_meter_position = xy(-1.5, -0.75)
+
+// mouse
+, mouse_hover_distance = 1
 
 
 // Colors
@@ -407,6 +417,7 @@ var Camera = {
     global.stage.moveBy(p);
     global.windlayer.moveBy(p);
     environment.redraw_bg = true;
+    Player.tutorial.has_scrolled = true;
   },
 
   focusOnPlayerDrone: function() {
@@ -580,7 +591,7 @@ Building.prototype = {
 }
 // ENVIRONMENT =======================================================
 var environment = {
-  ground: new Platform(xy(world_size[0], 3), 1, world_size, {}),
+  ground: new Platform(xy(world_size[0], 4), 1, world_size, {}),
 
   pts: [],
   towers: [], // Towers in the background skyline represented by [x, width, height]
@@ -676,7 +687,7 @@ var environment = {
   },
 
   generateTowerClump: function() {
-    var x0 = rnds.apply(global, this.ground.xrange);
+    var x0 = rnds.apply(global, tower_range);
     var n = num_towers_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
@@ -728,7 +739,8 @@ var environment = {
 
     // building positions should be evenly distributed
     // ... but perturbed a little bit
-    var buildings = range(world_size[0] + world_buffer, world_size[1] - world_buffer, avg_building_spacing)
+    // Also, don't generate a building in the vicinity of the drone spawn
+    var buildings = range(game_size.x * 2, world_size[1] - world_buffer, avg_building_spacing)
       .forEach(function(pos) {
         var b = new Building(
           perturb(pos, 10),
@@ -1222,6 +1234,7 @@ var Drone = function(p) {
     this.tilt = this.spin > 0 ? bounds(this.tilt, [-pi/2, pi/2]) : this.tilt;
     this.energy = bounds(this.energy, [0, 1]);
     this.integrity = bounds(this.integrity, [0, 1]);
+    this.p.y = min(this.p.y, drone_upper_bound)
   }
 
   this.reset = function() {
@@ -1405,14 +1418,14 @@ var Drone = function(p) {
 
   this.tiltLeft = function() {
     if (this.skip_tick || !this.powered) { return; }
-    this.v.x -= 0.1;
+    this.v.x -= sideways_velocity_bump;
     this.rpm_diff -= droneTiltAccel;
     this.tilt = -max_tilt;
   }
 
   this.tiltRight = function() {
     if (this.skip_tick || !this.powered) { return; }
-    this.v.x += 0.1;
+    this.v.x += sideways_velocity_bump;
     this.rpm_diff += droneTiltAccel;
     this.tilt = max_tilt;
   }
@@ -1470,9 +1483,12 @@ var Drone = function(p) {
     this.person.resistance = min_person_resistance;
 
     this.person.byRole('onControl');
+    
+    Player.tutorial.has_controlled = true; 
   }
 
   this.attemptControl = function() {
+
     var person = this.getClosestPerson();
 
     // square the control strength so that it's more limited
@@ -1528,6 +1544,7 @@ Drone.prototype = new Actor();
 var Player = {
   drone: new Drone(xy(8.5, 9.5)),
   usingItem: false,
+  tutorial_state: 0,
 
   tick: function() {
     for (var key in this.inputControlMap) {
@@ -1536,29 +1553,210 @@ var Player = {
         input.whenDown();
       }
     }
+
+    this.showTutorialMessage();
+
+    this.showMouseMessages();
+  },
+
+  draw: function() {
+    // draw.c(windlayer.ctx, mouse_p, 0.1, draw.shapeStyle('red'));
+    this.showScrollArrow();
+  },
+
+  showScrollArrow: function() {
+    if (!Player.tutorial.has_scrolled && Player.drone.p.x > game_size.x - camera_margin.x*4) {
+      var x = game_size.x - camera_margin.x;
+      var y = game_size.y / 2;
+      var fill = draw.shapeStyle('white', {globalAlpha: 0.5});
+      draw.r(overlay.ctx,
+        xy(x, y),
+        xy(x + 1, y + 1),
+        fill
+      );
+      draw.p(overlay.ctx,
+        [
+          xy(x + 1, y - 0.5),
+          xy(x + 1, y + 1.5),
+          xy(x + 2, y + 0.5)
+        ],
+        fill
+      );
+    }
+  },
+
+  showTutorialMessage: function() {
+    if (this.tutorial_state in tutorial_messages) {
+      var t = tutorial_messages[this.tutorial_state];
+      global.label = t.msg;
+      if (t.isDone()) {
+        this.tutorial_state += 1;
+      }
+    }
+    else {
+      global.label = '';     
+    }
+  },
+
+  showMouseMessages: function() {
+    var message_shown = false;
+    mouse_messages.forEach(function(item) {
+      if (
+        abs(mouse_p.x - item.obj.p.x) < mouse_hover_distance
+        && abs(mouse_p.y - item.obj.p.y) < mouse_hover_distance
+      ) {
+        setLabel(item.msg);
+        message_shown = true;
+      }
+    })
+    if (!message_shown) { setLabel(global.label); }
   },
 
   inputControlMap: { // `crunch `crunch `crunch
     // map event.which => function
     // ADSW directions for drone
-    65: {isDown: 0, whenDown: function() { Player.drone.tiltLeft(); }, onDown: function() { Player.drone.startTiltOffset(); }},
-    68: {isDown: 0, whenDown: function() { Player.drone.tiltRight(); }, onDown: function() { Player.drone.startTiltOffset(); }},
-    83: {isDown: 0, whenDown: function() { Player.drone.powerDown(); }},
-    87: {isDown: 0, whenDown: function() { Player.drone.powerUp(); }},
-    37: {isDown: 0, whenDown: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x -= person_speed; }},
-    39: {isDown: 0, whenDown: function() { if (probability(Player.drone.controlStrength())) Player.drone.person.p.x += person_speed; }},
-    40: {isDown: 0, onUp: function() { if (probability(Player.drone.controlStrength())) { console.log('ok'); Player.drone.person.itemInteract();} }},
-    38: {isDown: 0, onUp: function() { Player.drone.person.useItem(); }},
-    32: {isDown: 0, whenDown: function() {
-      // press spacebar to start controlling
-      Player.drone.attemptControl();
-      // Player.drone.attempting_control = !Player.drone.attempting_control;
-    }}
+    65: {
+      isDown: 0,
+      whenDown: function() { Player.drone.tiltLeft(); },
+      onDown: function() { Player.drone.startTiltOffset(); },
+      onUp: function() { Player.tutorial.has_flown_sideways = true; }
+    },
+    68: {
+      isDown: 0,
+      whenDown: function() { Player.drone.tiltRight(); },
+      onDown: function() { Player.drone.startTiltOffset(); },
+      onUp: function() { Player.tutorial.has_flown_sideways = true; }
+    },
+    83: {
+      isDown: 0,
+      whenDown: function() { Player.drone.powerDown(); },
+      onUp: function() { Player.tutorial.has_powered_up = true; }
+    },
+    87: {
+      isDown: 0,
+      whenDown: function() { Player.drone.powerUp(); },
+      onUp: function() { Player.tutorial.has_powered_up = true; }
+    },
+
+    37: {
+      isDown: 0,
+      whenDown: function() { if (probability(Player.drone.controlStrength()) && Player.drone.person) Player.drone.person.p.x -= person_speed; },
+      onUp: function() { Player.tutorial.has_moved_human = true; }
+    },
+    39: {
+      isDown: 0,
+      whenDown: function() { if (probability(Player.drone.controlStrength()) && Player.drone.person) Player.drone.person.p.x += person_speed; },
+      onUp: function() { Player.tutorial.has_moved_human = true; }
+    },
+    40: {
+      isDown: 0,
+      onUp: function() { if (probability(Player.drone.controlStrength())) { Player.drone.person.itemInteract();} Player.tutorial.has_pickedup_item = true; }
+    },
+    38: {
+      isDown: 0,
+      onUp: function() { Player.drone.person.useItem(); Player.tutorial.has_used_item = true; }
+    },
+
+    32: {
+      isDown: 0,
+      whenDown: function() {
+        // press spacebar to start controlling
+        Player.drone.attemptControl();
+        // Player.drone.attempting_control = !Player.drone.attempting_control;
+      },
+      // note: has_controlled gets toggled on when the human has been successfully controlled
+    }
   },
 }
 
+Player.tutorial = {
+  has_scrolled: false, // make sure player knows there's a camera
+  has_flown_sideways: false,
+  has_powered_up: false,
+  has_controlled: false,
+  has_used_item: false,
+  has_moved_human: false,
+  has_pickedup_item: false
+}
 
-// Input events
+
+// Tutorial messages
+var tutorial_messages = [
+  {
+    msg: "Fly left and right with A and D",
+    isDone: function() {
+      return Player.tutorial.has_flown_sideways;
+    }
+  },
+  {
+    msg: "Power your blades up and down with W and S",
+    isDone: function() {
+      return Player.tutorial.has_powered_up;
+    }
+  },
+  {
+    // wait until player has found a human
+    msg: "",
+    isDone: function() {
+      return close_people_per_tick.length > 0;;
+    }
+  },
+  {
+    msg: "Hold space to take control of a human",
+    isDone: function() {
+      return Player.tutorial.has_controlled;
+    }
+  },
+  {
+    msg: "Move your human with ←, →",
+    isDone: function() {
+      return Player.tutorial.has_moved_human;
+    },
+  },
+  {
+    msg: "Your human can pick something up with ↓",
+    isDone: function() {
+      return Player.tutorial.has_pickedup_item;
+    },
+  },
+  {
+    msg: "...and deliver it to you with ↑",
+    isDone: function() {
+      return Player.tutorial.has_used_item;
+    },
+  },
+  {
+    msg: "",
+    isDone: null_function
+  }
+  
+]
+
+
+
+
+// label stuff
+global.label = tutorial_messages[0].msg;
+// `todo `crunch maybe this won't be useful
+var mouse_messages = [
+  {obj: Player.drone, msg: "DRONE"}
+]
+
+global.mouse_p = xy(0, 0);
+
+// Input mouse events
+window.addEventListener('mousemove', function(event) {
+  var p = xy(
+    event.x / game_scale.y + game_origin.x,
+    (global.innerHeight - event.y) / game_scale.y  + game_origin.y
+  )
+  mouse_p = p;
+})
+
+
+
+
+// Input keyboard events
 // `crunch: these listeners are similar
 
 var keys_down = {};
@@ -1711,7 +1909,7 @@ var Wind = function() {
   this.total_angle = 0;
 
   // Data about  the path it'll take
-  this.curl_frequency = 10;
+  this.curl_frequency = 7;
   this.curl_amplitude = 0.1;
   this.propagation_length = 1;
   this.num_propagations = [50, 60];
@@ -1984,19 +2182,14 @@ var Hud = {
     for (var display_name in this.displays) {
       this.displays[display_name].call(this);
     }
-    if (gameplay_frame % 20 === 0) { this.fillInfo(); }
-  },
-
-  fillInfo: function() {
-    $("#game-info #fps").textContent = Math.round(avg_fps * 10)/10;
   },
 
   displays: {
     energy: function() {
       var p = vec_add(vec_add(overlay.origin, overlay.size), energy_meter_position);
-      (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color), overlay.ctx);
+      (new Battery()).drawRepr(p, 1.3, draw.shapeStyle(hud_color), overlay.ctx);
 
-      p = vec_add(p, xy(1, 0.1));
+      p = vec_add(p, xy(0.6, 0.06));
 
       draw.r(overlay.ctx,
         p,
@@ -2017,9 +2210,9 @@ var Hud = {
     integrity: function() {
       // `CRUNCH: this is essentially same as the energy meter. Just the icon adjustment is off a bit
       var p = vec_add(vec_add(overlay.origin, overlay.size), integrity_meter_position);
-      Player.drone.drawRepr(vec_add(p, xy(0, 0.3)), 2, draw.shapeStyle(hud_color), {ctx: overlay.ctx, freeze: true});
+      Player.drone.drawRepr(vec_add(p, xy(0, 0.2)), 1.3, draw.shapeStyle(hud_color), {ctx: overlay.ctx, freeze: true});
 
-      p = vec_add(p, xy(1.5, 0.1));
+      p = vec_add(p, xy(1, 0.06));
 
       draw.r(overlay.ctx,
         p,
@@ -2057,7 +2250,7 @@ var Hud = {
     p1.x += 0.2; // for style niceness
     p2.x -= 0.2;
 
-    var basic_style = draw.lineStyle(hud_color);
+    var basic_style = draw.lineStyle(hud_color, {lineWidth: 0.06});
 
     var green_range = green_range || [0, 0]
     var green_angle1 =  pi * (1 - green_range[0]);
@@ -2065,8 +2258,8 @@ var Hud = {
 
     draw.a(overlay.ctx, p0, r, 0, pi, draw.shapeStyle(hud_color_dark))
     draw.a(overlay.ctx, p0, r * 0.2, 0, pi, draw.shapeStyle(hud_color))
-    draw.a(overlay.ctx, p0, r, 0, pi, draw.lineStyle(hud_color, {lineWidth: 0.2}));
-    draw.a(overlay.ctx, p0, r, green_angle2, green_angle1, draw.lineStyle(hud_green, {lineWidth: 0.2}));
+    draw.a(overlay.ctx, p0, r, 0, pi, draw.lineStyle(hud_color, {lineWidth: 0.13}));
+    draw.a(overlay.ctx, p0, r, green_angle2, green_angle1, draw.lineStyle(hud_green, {lineWidth: 0.13}));
     p0.y += 0.05;
     pe.y += 0.05;
     draw.l(overlay.ctx, p0, pe, basic_style);
@@ -2093,15 +2286,6 @@ var Events = {
   }
 }
 
-  // scheduleEvent(5, function() {
-  //   (new Wind()).startGust(xy(8, 10));
-  // })
-  // scheduleEvent(30, function() {
-  //   (new Wind()).startGust(xy(4, 20));
-  // })
-  // scheduleEvent(60, function() {
-  //   (new Wind()).startGust(xy(15, 15));
-  // })
 // GAME LOOP =========================================================
 
 global.object_groups = {
@@ -2229,6 +2413,7 @@ gameplay_frame_callbacks = {};
 global.onFrame = function(frame, callback) {
   gameplay_frame_callbacks[frame] = callback;
 }
+
 global.onload = function() {
   // show the intro animation
   function go() {
@@ -2248,8 +2433,10 @@ global.onload = function() {
 }
 
 $("#start-game").onclick = setup;
-$("#skip").onclick = setup;
+// $("#skip").onclick = setup; // `todo: fix the skip button
 
+// `temporary SKIP THE INTRO
+// global.onload = setup;
 
 function setup () {
   // Clean up intro
@@ -2268,21 +2455,8 @@ function setup () {
     })
   }
 
-
-  // `temp sample people/items
-  global.p1 = (new Person()).init({p: xy(19, 3), v: xy(0.05, 0)});
-  global.p2 = (new Person()).init({p: xy(18, 3)});
-  global.p3 = (new Person()).init({p: xy(27, 3), v: xy(-0.05, 0), role: roles.guard});
-  
-
   // Game target: if you overpower this one, you win
-  global.target = (new Person()).init({p: xy(37, 3), v: xy(-0.05, 0), role: roles.game_target});
-
-  global.battery1 = new Battery(xy(23, 3));
-  global.battery2 = new Battery(xy(28, 3));
-
-  global.p = (new Person()).init({p: xy(Player.drone.p.x  + 3, environment.ground.y0)});
-  Player.drone.controlFull(p);
+  global.target = (new Person()).init({p: xy(200, 3), v: xy(-0.05, 0), role: roles.game_target});
 
 
   addToLoop('background', [Events, Player]);
@@ -2291,13 +2465,9 @@ function setup () {
 
   addToLoop('foreground1', [
       Player.drone,
-      Player.drone.person,
-      p1,
-      p2,
-      p3,
+      (new Person()).init({p: xy(game_size.x + 5, 3)}),
       target,
-      battery1,
-      battery2,
+      new Battery(xy(game_size.x + 8, 3)),
   ]);
 
   addToLoop('foreground2', [
@@ -2316,83 +2486,5 @@ function setup () {
   startGame();
 };
 
-
-// Purpose of this thing is to debug the drone movement
-// it will not go in final game
-
-var pp_size = xy(250, 250); // in PIXELS (unlike main canvas's game_size)
-var pp_color = 'white';
-var pp_bg_color = 'black';
-
-
-Phaseplot = function(selector, scale, tick, origin_fraction) {
-  this.canvas = $(selector);
-  this.ctx = this.canvas.getContext('2d');
-  this.scale = scale;
-  if (!origin_fraction) { origin_fraction = xy(0.5, 0.5); }
-
-  this.u2px = function(pos) {
-    return xy(pos.x * this.scale.x, pos.y * this.scale.y);
-  }
-
-  var single_pixel_size = xy(1/this.scale.x, 1/this.scale.y);
-
-  var size_units = xy(pp_size.x / this.scale.x, pp_size.y / this.scale.y);
-
-  this.canvas.setAttribute("width", pp_size.x + "px");
-  this.canvas.setAttribute("height", pp_size.y + "px");
-
-  // (0, 0) is centered
-  this.ctx.setTransform(scale.x, 0, 0, -scale.y,
-    scale.x * size_units.x * origin_fraction.x,
-    scale.y * size_units.y * (1-origin_fraction.y)
-  );
-
-  this.plotPoint = function(pos) {
-    draw.r(this.ctx, pos, vec_add(pos, single_pixel_size), draw.shapeStyle(pp_color));
-  }
-
-  this.clear = function() {
-    draw.clr(this.ctx);
-  }
-
-  // Record drone position/velocity
-  this.tick = tick;
-
-  this.draw = function() {
-    draw.r(this.ctx, xy(-size_units.x, -size_units.y), size_units,  draw.shapeStyle('black', {globalAlpha: 0.005})); // Slowly fade out old tracks
-  }
-
-  addToLoop('overlay', this);
-
-  this.plotPoint(xy(0,0));
-}
-
-var pp_drone_xy = new Phaseplot('#phaseplot-drone-xy',
-  xy(2, 20),
-  function() {
-    this.plotPoint(xy(Player.drone.p_drawn.x, Player.drone.p_drawn.y));
-  },
-  xy(0, 0)
-);
-var pp_drone_vx = new Phaseplot('#phaseplot-drone-vx',
-  xy(2, 40),
-  function() {
-    this.plotPoint(xy(Player.drone.p.x, Player.drone.v.x));
-  }
-);
-var pp_drone_vy = new Phaseplot('#phaseplot-drone-vy',
-  xy(30, 2),
-  function() {
-    this.plotPoint(xy(Player.drone.v.y, Player.drone.p.y));
-  },
-  xy(0.5, 0)
-);
-var pp_drone_ay = new Phaseplot('#phaseplot-drone-ay',
-  xy(20, 300000),
-  function() {
-    this.plotPoint(xy(Player.drone.v.y, Player.drone.getLiftAccel().y + gravAccel().y));
-  }
-);
 
 })();

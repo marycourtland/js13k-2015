@@ -7,7 +7,7 @@ var Wind = function() {
   this.total_angle = 0;
 
   // Data about  the path it'll take
-  this.curl_frequency = 10;
+  this.curl_frequency = 7;
   this.curl_amplitude = 0.1;
   this.propagation_length = 1;
   this.num_propagations = [50, 60];

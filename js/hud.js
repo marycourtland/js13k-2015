@@ -6,19 +6,14 @@ var Hud = {
     for (var display_name in this.displays) {
       this.displays[display_name].call(this);
     }
-    if (gameplay_frame % 20 === 0) { this.fillInfo(); }
-  },
-
-  fillInfo: function() {
-    $("#game-info #fps").textContent = Math.round(avg_fps * 10)/10;
   },
 
   displays: {
     energy: function() {
       var p = vec_add(vec_add(overlay.origin, overlay.size), energy_meter_position);
-      (new Battery()).drawRepr(p, 2, draw.shapeStyle(hud_color), overlay.ctx);
+      (new Battery()).drawRepr(p, 1.3, draw.shapeStyle(hud_color), overlay.ctx);
 
-      p = vec_add(p, xy(1, 0.1));
+      p = vec_add(p, xy(0.6, 0.06));
 
       draw.r(overlay.ctx,
         p,
@@ -39,9 +34,9 @@ var Hud = {
     integrity: function() {
       // `CRUNCH: this is essentially same as the energy meter. Just the icon adjustment is off a bit
       var p = vec_add(vec_add(overlay.origin, overlay.size), integrity_meter_position);
-      Player.drone.drawRepr(vec_add(p, xy(0, 0.3)), 2, draw.shapeStyle(hud_color), {ctx: overlay.ctx, freeze: true});
+      Player.drone.drawRepr(vec_add(p, xy(0, 0.2)), 1.3, draw.shapeStyle(hud_color), {ctx: overlay.ctx, freeze: true});
 
-      p = vec_add(p, xy(1.5, 0.1));
+      p = vec_add(p, xy(1, 0.06));
 
       draw.r(overlay.ctx,
         p,
@@ -79,7 +74,7 @@ var Hud = {
     p1.x += 0.2; // for style niceness
     p2.x -= 0.2;
 
-    var basic_style = draw.lineStyle(hud_color);
+    var basic_style = draw.lineStyle(hud_color, {lineWidth: 0.06});
 
     var green_range = green_range || [0, 0]
     var green_angle1 =  pi * (1 - green_range[0]);
@@ -87,8 +82,8 @@ var Hud = {
 
     draw.a(overlay.ctx, p0, r, 0, pi, draw.shapeStyle(hud_color_dark))
     draw.a(overlay.ctx, p0, r * 0.2, 0, pi, draw.shapeStyle(hud_color))
-    draw.a(overlay.ctx, p0, r, 0, pi, draw.lineStyle(hud_color, {lineWidth: 0.2}));
-    draw.a(overlay.ctx, p0, r, green_angle2, green_angle1, draw.lineStyle(hud_green, {lineWidth: 0.2}));
+    draw.a(overlay.ctx, p0, r, 0, pi, draw.lineStyle(hud_color, {lineWidth: 0.13}));
+    draw.a(overlay.ctx, p0, r, green_angle2, green_angle1, draw.lineStyle(hud_green, {lineWidth: 0.13}));
     p0.y += 0.05;
     pe.y += 0.05;
     draw.l(overlay.ctx, p0, pe, basic_style);
