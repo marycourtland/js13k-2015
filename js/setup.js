@@ -47,11 +47,13 @@ var Camera = {
 
   moveBy: function(p) {
     game_origin = vec_add(game_origin, p);
+    global.fader.moveBy(p);
     global.bg1.moveBy(p);
     global.bg2.moveBy(p);
     global.stage.moveBy(p);
     global.windlayer.moveBy(p);
     environment.redraw_bg = true;
+    Player.tutorial.has_scrolled = true;
   },
 
   focusOnPlayerDrone: function() {
@@ -70,6 +72,8 @@ global.bg2 = new Layer("#game_background2", scale(game_size, 1/0.95), scale(game
 global.stage = new Layer("#game_stage", game_size, game_scale);
 global.windlayer = new Layer("#game_wind", game_size, game_scale); // this one will fade out slowly
 global.overlay = new Layer("#game_overlay", game_size, game_scale);
+
+global.introimg = new Layer("#intro-img", game_size, game_scale);
 
 // this is the container for all the layers
 $("#game-layers").style.height = (game_size.y * game_scale.y) + "px";

@@ -32,6 +32,8 @@ var Drone = function(p) {
     this.tilt = this.spin > 0 ? bounds(this.tilt, [-pi/2, pi/2]) : this.tilt;
     this.energy = bounds(this.energy, [0, 1]);
     this.integrity = bounds(this.integrity, [0, 1]);
+    this.p.y = min(this.p.y, drone_upper_bound);
+    this.p.x = bounds(this.p.x, world_size);
   }
 
   this.reset = function() {
@@ -80,9 +82,10 @@ var Drone = function(p) {
 
     this.boundify();
 
-    if (this.attempting_control) {
-      this.attemptControl();
-    }
+    // for auto-controlling
+    // if (this.attempting_control) {
+    //   this.attemptControl();
+    // }
   }
 
   this.draw = function() { 
@@ -163,7 +166,8 @@ var Drone = function(p) {
     }
 
     var f = 0.8;
-    var blade_phase = (this.powered && (typeof this.rpm_scale !== 'undefined') && !params.freeze) ? this.rpm_scale * gameplay_frame : 0.8;
+    var rpm_scale = params.rpm_scale ? params.rpm_scale : this.rpm_scale;
+    var blade_phase = (this.powered && (typeof rpm_scale !== 'undefined') && !params.freeze) ? rpm_scale * gameplay_frame : 0.8;
     drawBlade(scale * drone_arm_size.x - 0.05, sin(f * blade_phase));
     drawBlade(-scale * drone_arm_size.x + 0.05, sin(f * blade_phase));
 
@@ -213,14 +217,14 @@ var Drone = function(p) {
 
   this.tiltLeft = function() {
     if (this.skip_tick || !this.powered) { return; }
-    this.v.x -= 0.1;
+    this.v.x -= sideways_velocity_bump;
     this.rpm_diff -= droneTiltAccel;
     this.tilt = -max_tilt;
   }
 
   this.tiltRight = function() {
     if (this.skip_tick || !this.powered) { return; }
-    this.v.x += 0.1;
+    this.v.x += sideways_velocity_bump;
     this.rpm_diff += droneTiltAccel;
     this.tilt = max_tilt;
   }
@@ -278,9 +282,12 @@ var Drone = function(p) {
     this.person.resistance = min_person_resistance;
 
     this.person.byRole('onControl');
+    
+    Player.tutorial.has_controlled = true; 
   }
 
   this.attemptControl = function() {
+
     var person = this.getClosestPerson();
 
     // square the control strength so that it's more limited

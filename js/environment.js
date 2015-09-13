@@ -1,6 +1,6 @@
 // ENVIRONMENT =======================================================
 var environment = {
-  ground: new Platform(xy(world_size[0], 3), 1, world_size, {}),
+  ground: new Platform(xy(world_size[0], 4), 1, world_size, {}),
 
   pts: [],
   towers: [], // Towers in the background skyline represented by [x, width, height]
@@ -42,6 +42,23 @@ var environment = {
     // Ground
     var fill = draw.shapeStyle(environment_color);
     draw.p(stage.ctx, this.pts, fill);
+
+    this.drawBoundaryFog();
+  },
+
+  drawBoundaryFog: function() {
+    var p1 = xy(world_size[0] - 50, 0),
+        p2 = xy(world_size[0] + 50, game_size.y),
+        p3 = xy(world_size[1] + 50, 0),
+        p4 = xy(world_size[1] - 50, game_size.y);
+    var grd1 = stage.ctx.createLinearGradient(p1.x, 0, p2.x, 0);
+    var grd2 = stage.ctx.createLinearGradient(p3.x, 0, p4.x, 0);
+    grd1.addColorStop(0.5, 'white');
+    grd1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    grd2.addColorStop(0.5, 'white');
+    grd2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    draw.r(stage.ctx, p1, p2, draw.shapeStyle(grd1));
+    draw.r(stage.ctx, p3, p4, draw.shapeStyle(grd2));
   },
 
   drawTower: function(tower) {
@@ -96,7 +113,7 @@ var environment = {
   },
 
   generateTowerClump: function() {
-    var x0 = rnds.apply(global, this.ground.xrange);
+    var x0 = rnds.apply(global, tower_range);
     var n = num_towers_per_clump + rnds(-3, 3);
 
     for (var i = 0; i < n; i++) {
@@ -148,7 +165,8 @@ var environment = {
 
     // building positions should be evenly distributed
     // ... but perturbed a little bit
-    var buildings = range(world_size[0] + world_buffer, world_size[1] - world_buffer, avg_building_spacing)
+    // Also, don't generate a building in the vicinity of the drone spawn
+    var buildings = range(game_size.x * 2, world_size[1] - world_buffer, avg_building_spacing)
       .forEach(function(pos) {
         var b = new Building(
           perturb(pos, 10),

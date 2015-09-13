@@ -1,27 +1,17 @@
 // GAME EVENTS =======================================================
-// `crunch: these listeners are similar
 
-var keys_down = {};
+var Events = {
+  tick: function() {
+    debug('Event tick')
 
-window.addEventListener("keydown", function(event) {
+    if (probability(wind_probability)) {
+      var p = xy(
+        game_origin.x - 1,
+        bounds(Player.drone.p_drawn.y + rnds(-10, 10), [environment.ground.y0 + 2, game_size.y - 2])
+      );
 
-  var input = Player.inputControlMap[event.which];
-  if (input) {
-    event.preventDefault();
-    input.isDown = 1;
-    if ((!(event.which in keys_down) || !keys_down[event.which]) && typeof input.onDown === 'function') {
-      input.onDown();
+      debug('p:', p);
+      (new Wind()).startGust(p);
     }
   }
-  keys_down[event.which] = true;
-});
-
-window.addEventListener("keyup", function(event) {
-  var input = Player.inputControlMap[event.which];
-  if (input) {
-    event.preventDefault();
-    input.isDown = 0;
-    if (typeof input.onUp === 'function') { input.onUp(); }
-  }
-  keys_down[event.which] = false;
-});
+}

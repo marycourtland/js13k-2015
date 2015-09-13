@@ -1,37 +1,29 @@
-global.wind = {
-  pts: [],
-  remaining_propagations: 0,
+var Wind = function() {
+  // state vars
+  this.remaining_propagations = 0;
+  this.curl = 0;
+  this.previous_angle = 0;
+  this.next_curl_dir = 1;
+  this.total_angle = 0;
 
-  slowness: 1,
+  // Data about  the path it'll take
+  this.curl_frequency = 7;
+  this.curl_amplitude = 0.1;
+  this.propagation_length = 1;
+  this.num_propagations = [50, 60];
+  this.visible_gust_length = 6;
+  this.starting_angles = [0, pi/16, -pi/16];
+  this.angle_window = [-pi/4, pi/4];
+  this.height_window = [environment.ground.y0, game_size.y - 4];
 
-  curl: 0,
-  curl_frequency: 10,
-  previous_angle: 0,
-  curl_amplitude: 0.1,
-  propagation_length: 1,
-  num_propagations: [50, 60],
-  angle_window: [-pi/4, pi/4],
-  height_window: [environment.ground.y0, game_size.y - 4],
-  next_curl_dir: 1,
+  this.pts = [];
+  this.bezier_control_fraction = 0.18;
+  this.bezier_controls = {};
+}
 
-  curl: 0,
-  curl_frequency: 10,
-  previous_angle: 0,
-  curl_amplitude: 0.1,
-  propagation_length: 1,
-
-  total_angle: 0,
-
-  starting_angles: [0, pi],
-  starting_angles: [0],
-
-  visible_gust_length: 6,
-
-  bezier_control_fraction: 0.18,
-  bezier_controls: {},
-
+Wind.prototype = {
   startGust: function(origin) {
-    // Random walk in a general direction (rightwards, for now - `temp)
+    // this is an init function
     this.pts = [origin];
     this.bezier_controls = {};
     this.curl = 0;
@@ -40,9 +32,11 @@ global.wind = {
     this.total_angle = 0;
     this.propagation_frames = -1;
     this.next_curl_dir = rnd_choice([1, -1]);
+    addToLoop('foreground2', [this]);
   },
 
   influenceDrone: function() {
+    if (this.destroyed) { return; }
     if (this.pts.length < 2) { return; } // `todo: maybe i want to limit this to < 3 because of the rendering
     for (var i = this.getStart() - 1; i < this.pts.length - 2; i++) {
       var dp = cart2polar(vec_subtract(Player.drone.p_drawn, this.pts[i]));
@@ -52,13 +46,11 @@ global.wind = {
     }
   },
 
-  reset: function() {
-  },
-
   tick: function() {
+    if (this.destroyed) { return; }
+
     // `todo: modulate speed?
     this.propagation_frames += 1;
-    if (this.propagation_frames % this.slowness !== 0) { return; }
 
     if (this.remaining_propagations > 0 && this.pts.length > 0) {
       // redo the curl every few frames
@@ -69,7 +61,7 @@ global.wind = {
 
       var min_curl = 0;
       var max_curl = this.curl_amplitude;
-      if ((gameplay_frame * this.slowness) % this.curl_frequency === 0) {
+      if ((gameplay_frame) % this.curl_frequency === 0) {
         if (this.next_curl_dir === 1) {
           this.curl = rnds(min_curl, max_curl);
         }
@@ -90,9 +82,13 @@ global.wind = {
       this.previous_angle = propagation.th;
       this.total_angle += this.previous_angle;
       this.remaining_propagations -= 1;
+
+      this.influenceDrone();
+    }
+    else {
+      this.destroy();
     }
 
-    this.influenceDrone();
   },
 
   calculateNextControlPoint: function() {
@@ -115,18 +111,13 @@ global.wind = {
       this.bezier_controls[n] = this.curl > 0 ? [c1, c2] : [c2, c1];
     }
   },
-
-  // `crunch not sure how much this is used
-  last: function() {
-    if (this.pts.length < 1) { return null; }
-    return this.pts[this.pts.length - 1]
-  },
-
   draw: function() {
-    if (this.pts.length < 3) { return; }
+    if (this.destroyed) { return; }
+    if (this.pts && this.pts.length < 3) { return; }
 
     var pts = this.pts;
     var controls = this.bezier_controls;
+    var wind = this;
 
     wind_colors.forEach(function(data) {
       draw.do(windlayer.ctx, draw.lineStyle(data[0], {lineWidth: data[1], globalAlpha: data[2], lineCap:'round'}), function() {
@@ -153,5 +144,20 @@ global.wind = {
       start = Math.floor(this.pts.length - 1 - this.remaining_propagations);
     }
     return start;
+  },
+
+  // `crunch not sure how much this is used
+  last: function() {
+    if (this.pts.length < 1) { return null; }
+    return this.pts[this.pts.length - 1]
+  },
+
+  destroy: function() {
+    // don't leave memory tied up at the end
+    delete this.pts;
+    delete this.bezier_controls;
+    loopDestroy(this);
+    this.destroyed = true;
   }
+
 }
